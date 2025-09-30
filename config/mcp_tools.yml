@@ -3,7 +3,17 @@
 # Purpose: provide stable, human-readable metadata for prompts and routing
 # Notes: arguments reflect server-side schemas at a high level (names/types)
 
-server: ${MCP_URL}
+server:
+  command: "uvx"
+  args:
+    - "teradata-mcp-server"
+    - "--mcp_transport"
+    - "streamable-http"
+    - "--mcp_port"
+    - "8001"
+    - "--profile"
+    - "all"
+  cwd: null
 version: 1
 
 tools:

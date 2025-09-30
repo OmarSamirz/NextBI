@@ -7,7 +7,24 @@ BASE_DIR = Path(__file__).parents[1]
 
 CONFIG_PATH = BASE_DIR / "config"
 
+MCP_TOOLS_YML_PATH = CONFIG_PATH / "mcp_tools.yml"
+
+MCP_TOOLS_TOML_PATH = CONFIG_PATH / "mcp_tools.toml"
+
 ENV_PATH = CONFIG_PATH / ".env"
+
+MCP_CONFIG = {
+    "mcpServers": {
+        "teradata": {
+        "command": "uvx",
+        "args": ["teradata-mcp-server"],
+        "env": {
+            # "DATABASE_URI": "",
+            "MCP_TRANSPORT": "stdio"
+        }
+        }
+    }
+}
 
 DTYPE_MAP = {
     'float32': torch.float32,
