@@ -3,8 +3,6 @@ from ai_modules.base import AI
 from ai_modules.gpt import AIGPT
 from modules.config import get_ai_backend
 
-# Comment
-
 
 def get_ai() -> AI:
     """Construct and return a concrete :class:`AI` backend based on ``AI_BACKEND``.
