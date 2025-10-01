@@ -3,7 +3,6 @@ from ai_modules.base import AI
 from ai_modules.gpt import AIGPT
 from modules.config import get_ai_backend
 
-
 def get_ai() -> AI:
     """Construct and return a concrete :class:`AI` backend based on ``AI_BACKEND``.
 
@@ -25,10 +24,6 @@ def get_ai() -> AI:
         pass
     if backend == "gpt":
         return AIGPT()
-    if backend == "openai":
-        # Lazy import to avoid heavy deps unless actually needed
-        from ai_modules.openai import AIOpenAI  # type: ignore
-        return AIOpenAI()
     if backend == "qwen":
         from ai_modules.qwen import AIQwen
         return AIQwen()

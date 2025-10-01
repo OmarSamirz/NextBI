@@ -14,3 +14,5 @@ qwen-agent>=0.0.31
 uv>=0.8.22
 teradatagenai
 mcp-use
+langchain-openai
+langchain-ollama

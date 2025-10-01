@@ -85,7 +85,6 @@ def get_openai_config(base_dir: Optional[Path] = None) -> dict:
     client = OpenAI(**client_kwargs)
     return {"api_key": api_key, "model": model, "client": client}
 
-
 def get_ai_backend(base_dir: Optional[Path] = None) -> str:
     """Return AI_BACKEND (defaults to 'gpt').
 

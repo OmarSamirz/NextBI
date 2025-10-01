@@ -1,13 +1,20 @@
 import streamlit as st
+from dotenv import load_dotenv
+from mcp_use import Logger as MCPLogger
 
+
+import os
 import asyncio
 import datetime as dt
 from typing import List
 
 from utils import get_ai
+from constants import ENV_PATH
 from modules.logger import ChatLogger
 from ai_modules.base import Message, AI
+from constants import TERADATA_LOGO_PATH
 
+load_dotenv(ENV_PATH)
 
 MAX_MESSAGES: int = 100  # Cap in-memory history length
 
@@ -18,6 +25,15 @@ def init_session_state() -> None:
         st.session_state["messages"] = []  # type: List[Message] # type: ignore
     if "logger" not in st.session_state:
         st.session_state["logger"] = ChatLogger()
+        # mcp_logger = MCPLogger()
+        # mcp_logger.configure(
+        #     level=1,
+        #     format_str="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        #     log_to_console=False,
+        #     log_to_file=str(os.getenv("LOG_FILE")),
+        # )
+        # st.session_state["mcp_logger"] = mcp_logger
+        
     if "ai_instance" not in st.session_state:
         try:
             ai_impl = get_ai()
@@ -35,9 +51,8 @@ def render_sidebar() -> None:
 
     with st.sidebar:
         # Logo
-        _logo_path = _Path(__file__).parent / "assets" / "td_new_trans.png"
-        if _logo_path.exists():
-            st.image(str(_logo_path))
+        if TERADATA_LOGO_PATH.exists():
+            st.image(str(TERADATA_LOGO_PATH))
 
         # Title
         st.title("NextBI")
@@ -70,7 +85,7 @@ def render_chat(messages: List[Message]) -> None:
         with st.chat_message(chat_role):
             st.markdown(content)
 
-async def generate_ai_reply(prompt: str) -> str:
+async def generate_ai_reply() -> str:
     """Generate a reply from the AI backend."""
     logger = st.session_state["logger"]
     backend: AI = st.session_state["ai_instance"]
@@ -106,7 +121,7 @@ def handle_user_input(prompt: str) -> None:
 
     try:
         with st.spinner("Thinking..."):
-            reply = asyncio.run(generate_ai_reply(text))
+            reply = asyncio.run(generate_ai_reply())
     except Exception as e:
         st.error(f"Couldn't get a reply: {e}")
         ai_msg = {

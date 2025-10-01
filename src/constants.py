@@ -13,6 +13,10 @@ MCP_TOOLS_TOML_PATH = CONFIG_PATH / "mcp_tools.toml"
 
 ENV_PATH = CONFIG_PATH / ".env"
 
+ASSETS_PATH = BASE_DIR / "assets"
+
+TERADATA_LOGO_PATH = ASSETS_PATH / "td_new_trans.png"
+
 MCP_CONFIG = {
     "mcpServers": {
         "teradata": {
