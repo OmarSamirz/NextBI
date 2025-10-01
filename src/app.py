@@ -2,7 +2,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from mcp_use import Logger as MCPLogger
 
-
 import os
 import asyncio
 import datetime as dt
@@ -19,27 +18,36 @@ load_dotenv(ENV_PATH)
 MAX_MESSAGES: int = 100  # Cap in-memory history length
 
 
+def get_or_create_event_loop():
+    """Get or create a persistent event loop for the session."""
+    if "event_loop" not in st.session_state:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        st.session_state["event_loop"] = loop
+    return st.session_state["event_loop"]
+
 def init_session_state() -> None:
     """Initialize session state with messages, logger, and AI instance."""
     if "messages" not in st.session_state:
         st.session_state["messages"] = []  # type: List[Message] # type: ignore
+    
     if "logger" not in st.session_state:
         st.session_state["logger"] = ChatLogger()
-        # mcp_logger = MCPLogger()
-        # mcp_logger.configure(
-        #     level=1,
-        #     format_str="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        #     log_to_console=False,
-        #     log_to_file=str(os.getenv("LOG_FILE")),
-        # )
-        # st.session_state["mcp_logger"] = mcp_logger
-        
+    
+    # Initialize event loop first
+    get_or_create_event_loop()
+    
     if "ai_instance" not in st.session_state:
         try:
             ai_impl = get_ai()
             st.session_state["ai_instance"] = ai_impl
             # Warmup: optional
-            getattr(ai_impl, "warmup", lambda: None)()
+            warmup_func = getattr(ai_impl, "warmup", None)
+            if warmup_func and asyncio.iscoroutinefunction(warmup_func):
+                loop = st.session_state["event_loop"]
+                loop.run_until_complete(warmup_func())
+            elif warmup_func:
+                warmup_func()
             st.session_state["logger"].event("ai.init", backend=ai_impl.__class__.__name__)
         except Exception as e:
             st.session_state["logger"].event("ai.init.error", error=str(e))
@@ -47,8 +55,6 @@ def init_session_state() -> None:
 
 def render_sidebar() -> None:
     """Render the left sidebar with branding and description."""
-    from pathlib import Path as _Path
-
     with st.sidebar:
         # Logo
         if TERADATA_LOGO_PATH.exists():
@@ -64,7 +70,7 @@ def render_sidebar() -> None:
                 "<p>NextBI is an intelligent business assistant that replaces traditional dashboards "
                 "by allowing executives and business users to get instant insights through conversation. "
                 "Instead of navigating reports, users simply ask questions in plain English, "
-                "and NextBI generates answers directly from enterprise data—powered by Teradata’s MCP.</p>"
+                "and NextBI generates answers directly from enterprise data—powered by Teradata's MCP.</p>"
                 "</div>"
             ),
             unsafe_allow_html=True,
@@ -121,7 +127,9 @@ def handle_user_input(prompt: str) -> None:
 
     try:
         with st.spinner("Thinking..."):
-            reply = asyncio.run(generate_ai_reply())
+            # Use the persistent event loop instead of asyncio.run()
+            loop = st.session_state["event_loop"]
+            reply = loop.run_until_complete(generate_ai_reply())
     except Exception as e:
         st.error(f"Couldn't get a reply: {e}")
         ai_msg = {

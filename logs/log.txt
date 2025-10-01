@@ -233,3 +233,52 @@
 [2025-10-01T14:10:02+00:00] event:ai.call.start count=7
 [2025-10-01T14:10:35+00:00] event:ai.call.end chars=55
 [2025-10-01T14:10:35+00:00] ai: There were 31 transactions made in Ohio in the BANK_DB.
+[2025-10-01T18:01:43+00:00] event:ai.backend.select backend=gpt
+[2025-10-01T18:01:44+00:00] event:ai.init backend=AIGPT
+[2025-10-01T18:02:04+00:00] user: How many tables in bank_db database?
+[2025-10-01T18:02:04+00:00] ai: [error] There is no current event loop in thread 'ScriptRunner.scriptThread'.
+[2025-10-01T18:03:34+00:00] event:ai.backend.select backend=gpt
+[2025-10-01T18:03:34+00:00] event:ai.init backend=AIGPT
+[2025-10-01T18:04:03+00:00] user: How many tables we have?
+[2025-10-01T18:04:03+00:00] ai: [error] There is no current event loop in thread 'ScriptRunner.scriptThread'.
+[2025-10-01T18:05:27+00:00] event:ai.backend.select backend=gpt
+[2025-10-01T18:05:28+00:00] event:ai.init backend=AIGPT
+[2025-10-01T18:05:45+00:00] user: How many tables we have?
+[2025-10-01T18:05:45+00:00] event:ai.call.start count=1
+[2025-10-01T18:05:53+00:00] ai: [error] 'dict' object has no attribute 'replace'
+[2025-10-01T18:06:34+00:00] event:ai.backend.select backend=gpt
+[2025-10-01T18:06:35+00:00] event:ai.init backend=AIGPT
+[2025-10-01T18:06:45+00:00] user: how many tables we have in bank_db
+[2025-10-01T18:06:45+00:00] event:ai.call.start count=1
+[2025-10-01T18:06:57+00:00] event:ai.call.end chars=84
+[2025-10-01T18:06:57+00:00] ai: The `bank_db` database contains 3 tables: 1. user_query 2. transactions 3. branches
+[2025-10-01T18:07:05+00:00] user: how many tables we have in bank_db
+[2025-10-01T18:07:05+00:00] event:ai.call.start count=3
+[2025-10-01T18:10:41+00:00] event:ai.backend.select backend=gpt
+[2025-10-01T18:10:41+00:00] event:ai.backend.select backend=gpt
+[2025-10-01T18:10:42+00:00] event:ai.init backend=AIGPT
+[2025-10-01T18:10:42+00:00] event:ai.init backend=AIGPT
+[2025-10-01T18:10:59+00:00] user: How many tables do we have in bank_db
+[2025-10-01T18:10:59+00:00] event:ai.call.start count=1
+[2025-10-01T18:11:10+00:00] event:ai.call.end chars=90
+[2025-10-01T18:11:10+00:00] ai: The `bank_db` database contains 3 tables: 1. `user_query` 2. `transactions` 3. `branches`
+[2025-10-01T18:11:20+00:00] user: How many tables do we have in bank_db
+[2025-10-01T18:11:20+00:00] event:ai.call.start count=3
+[2025-10-01T18:11:24+00:00] event:ai.call.end chars=90
+[2025-10-01T18:11:24+00:00] ai: The `bank_db` database contains 3 tables: 1. `user_query` 2. `transactions` 3. `branches`
+[2025-10-01T18:11:36+00:00] user: display 10 branches
+[2025-10-01T18:11:36+00:00] event:ai.call.start count=5
+[2025-10-01T18:11:42+00:00] event:ai.call.end chars=1284
+[2025-10-01T18:11:42+00:00] ai: Here are 5 branches from the `branches` table in the `bank_db` database: 1. **Branch ID:** 78 - **Branch Name:** Citi Bank West Sheilastad - **Governorate:** Wyoming - **Branch Address:** Unit 8996 Box 2870, DPO AA 69412 - **Latitude:** 30.392736 - **Longitude:** -117.860752 2. **Branch ID:** 93 - **Branch Name:** Citi Bank Melissamouth - **Governorate:** Pennsylvania - **Branch Address:** 3443 Conner Mount, New Jessica, VA 41268 - **Latitude:** 33.143263 - **Longitude:** -101.245344 3. **Branch ID:** 76 - **Branch Name:** Citi Bank South Anthonymouth - **Governorate:** Kansas - **Branch Address:** 301 Lloyd Square Apt. 850, Gonzalesport, MN 36771 - **Latitude:** 40.597073 - **Longitude:** -66.286188 4. **Branch ID:** 38 - **Branch Name:** Citi Bank Lake Maryport - **Governorate:** Washington - **Branch Address:** 07675 Vickie Lock Apt. 583, West Diane, CO 20716 - **Latitude:** 34.495166 - **Longitude:** -86.329119 5. **Branch ID:** 61 - **Branch Name:** Citi Bank South Christopher - **Governorate:** Montana - **Branch Address:** 7365 Jason Camp Apt. 793, Campbellborough, IA 94981 - **Latitude:** 37.945097 - **Longitude:** -80.011863 *Note: Only 5 branches were available for preview.*
+[2025-10-01T18:12:04+00:00] user: you have returned only five branches but I want 10
+[2025-10-01T18:12:04+00:00] event:ai.call.start count=7
+[2025-10-01T18:12:10+00:00] event:ai.call.end chars=1451
+[2025-10-01T18:12:10+00:00] ai: It seems that the table preview only contains 5 branches. There might be some limitation or configuration that provides only this subset of data. Here are the 5 branches we have: 1. **Branch ID:** 78 - **Branch Name:** Citi Bank West Sheilastad - **Governorate:** Wyoming - **Branch Address:** Unit 8996 Box 2870, DPO AA 69412 - **Latitude:** 30.392736 - **Longitude:** -117.860752 2. **Branch ID:** 93 - **Branch Name:** Citi Bank Melissamouth - **Governorate:** Pennsylvania - **Branch Address:** 3443 Conner Mount, New Jessica, VA 41268 - **Latitude:** 33.143263 - **Longitude:** -101.245344 3. **Branch ID:** 76 - **Branch Name:** Citi Bank South Anthonymouth - **Governorate:** Kansas - **Branch Address:** 301 Lloyd Square Apt. 850, Gonzalesport, MN 36771 - **Latitude:** 40.597073 - **Longitude:** -66.286188 4. **Branch ID:** 38 - **Branch Name:** Citi Bank Lake Maryport - **Governorate:** Washington - **Branch Address:** 07675 Vickie Lock Apt. 583, West Diane, CO 20716 - **Latitude:** 34.495166 - **Longitude:** -86.329119 5. **Branch ID:** 61 - **Branch Name:** Citi Bank South Christopher - **Governorate:** Montana - **Branch Address:** 7365 Jason Camp Apt. 793, Campbellborough, IA 94981 - **Latitude:** 37.945097 - **Longitude:** -80.011863 If there are specific details needed beyond this preview, we may need to explore additional queries or settings.
+[2025-10-01T18:12:39+00:00] user: Can you show me the name of 10 branches
+[2025-10-01T18:12:39+00:00] event:ai.call.start count=9
+[2025-10-01T18:12:42+00:00] event:ai.call.end chars=390
+[2025-10-01T18:12:42+00:00] ai: Here are the names of the branches from the `branches` table in the `bank_db` database: 1. Citi Bank West Sheilastad 2. Citi Bank Melissamouth 3. Citi Bank South Anthonymouth 4. Citi Bank Lake Maryport 5. Citi Bank South Christopher Unfortunately, only 5 branch names are currently available for preview. If you need more branch names, additional data access or queries might be required.
+[2025-10-01T18:12:52+00:00] user: how many transactions where made in Ohio?
+[2025-10-01T18:12:52+00:00] event:ai.call.start count=11
+[2025-10-01T18:13:02+00:00] event:ai.call.end chars=40
+[2025-10-01T18:13:02+00:00] ai: There were 31 transactions made in Ohio.
