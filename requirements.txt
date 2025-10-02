@@ -5,13 +5,9 @@ pytest>=8.0
 teradataml
 teradata-mcp-server>=0.1.5
 mcp>=1.1.0
-langchain-mcp-adapters>=0.0.11
 pyyaml>=6.0
-transformers>=4.56.2
-bitsandbytes>=0.47.0
-accelerate>=1.10.1
 uv>=0.8.22
 teradatagenai
 mcp-use
+langchain-mcp-adapters>=0.0.11
 langchain-openai
-langchain-ollama

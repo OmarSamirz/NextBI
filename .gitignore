@@ -1,4 +1,2 @@
 config/.env
 **/__pycache__/*
-.vscode/*
-workspace/*
