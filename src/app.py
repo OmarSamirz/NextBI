@@ -63,12 +63,9 @@ def render_sidebar() -> None:
             (
             "<div class=\"sidebar-desc\" style=\"color:#888;>"
                 "<p>"
-                    "Select AI 2.0 is an intelligent business assistant designed to replace traditional dashboards "
-                    "by enabling executives and business users to gain instant insights through natural conversation. "
-                    "Instead of navigating complex reports, users can simply ask questions in plain English,"
-                    "and Select AI 2.0 delivers precise answers directly from enterprise data."
-                    "The application connects seamlessly with the Teradata database using the Teradata MCP server,"
-                    "making it easier than ever for users to interact with and explore their data."
+                "Select AI 2.0 is an AI for BI assistant that replaces dashboards,"
+                "letting executives and business users ask questions in plain English and get instant answers from enterprise data,"
+                "seamlessly connected to Vantage via TD MCP server."
                 "</p>"
             "</div>"
             ),
