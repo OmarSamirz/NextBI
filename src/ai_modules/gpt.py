@@ -47,19 +47,23 @@ class AIGPT(AI):
             logger.log(f"[Step {step}/{self.max_steps}]", "")
             if isinstance(item, tuple) and len(item) == 2:
                 action, observation = item
-
                 logger.log("[LLM -> MCP Tool Call]", action.tool)
                 logger.log("[LLM -> MCP Tool Input]", str(action.tool_input))
 
-                observation = json.loads(observation) if observation != "" else {}
-                if "status" in observation:
-                    status = observation["status"]
+                try:
+                    observation_json = json.loads(observation) if observation else {}
+                except (json.JSONDecodeError, TypeError):
+                    observation_json = {}
+                    logger.log("[MCP Observation - Raw Text]", observation)
+
+                if "status" in observation_json:
+                    status = observation_json["status"]
                     logger.log("[MCP Status]", status)
-                if status == "success":
-                    results = observation["results"]
-                    logger.log("[MCP Results]", str(results))
-                    sql_query = observation.get("metadata", {}).get("sql", "[No SQL query found]")
-                    logger.log("[MCP SQL Query]", sql_query)
+                    if status == "success":
+                        results = observation_json["results"]
+                        logger.log("[MCP Results]", str(results))
+                        sql_query = observation_json.get("metadata", {}).get("sql", "[No SQL query found]")
+                        logger.log("[MCP SQL Query]", sql_query)
             elif isinstance(item, str):
                 final_output = item
             

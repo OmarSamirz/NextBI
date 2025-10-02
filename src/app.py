@@ -61,19 +61,20 @@ def render_sidebar() -> None:
         # Description
         st.markdown(
             (
-            "<div class=\"sidebar-desc\" style=\"color:#888;>"
-                "<p>"
-                    "Select AI 2.0 is an intelligent business assistant designed to replace traditional dashboards "
-                    "by enabling executives and business users to gain instant insights through natural conversation. "
-                    "Instead of navigating complex reports, users can simply ask questions in plain English,"
-                    "and Select AI 2.0 delivers precise answers directly from enterprise data."
-                    "The application connects seamlessly with the Teradata database using the Teradata MCP server,"
-                    "making it easier than ever for users to interact with and explore their data."
-                "</p>"
-            "</div>"
+                "<div class=\"sidebar-desc\" style=\"color:#888;\">"
+                    "<p>"
+                        "Select AI 2.0 is an intelligent business assistant designed to replace traditional dashboards "
+                        "by enabling executives and business users to gain instant insights through natural conversation. "
+                        "Instead of navigating complex reports, users can simply ask questions in plain English, "
+                        "and Select AI 2.0 delivers precise answers directly from enterprise data. "
+                        "The application connects seamlessly with the Teradata database using the Teradata MCP server, "
+                        "making it easier than ever for users to interact with and explore their data."
+                    "</p>"
+                "</div>"
             ),
             unsafe_allow_html=True,
         )
+
 
 def render_chat(messages: List[Message]) -> None:
     """Render chat messages in Streamlit UI."""
