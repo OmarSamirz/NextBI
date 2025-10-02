@@ -12,7 +12,6 @@ from mcp_use import MCPClient, MCPAgent
 from langchain_openai import ChatOpenAI
 
 import os
-import re
 from typing import Any
 
 from constants import MCP_CONFIG
@@ -31,32 +30,35 @@ class AIGPT(AI):
         self.model = cfg["model"]
         self.mcp_config = MCP_CONFIG.copy()
         self.mcp_config["mcpServers"]["teradata"]["env"]["DATABASE_URI"] = os.getenv("DATABASE_URI")
-        self.default_database = os.getenv("TD_NAME", "BANK_DB")
+        self.default_database = os.getenv("DEFAULT_DATABASE", "BANK_DB")
         self.llm = ChatOpenAI(model=self.model)
         self.client = MCPClient.from_dict(config=self.mcp_config)
         self.agent = MCPAgent(llm=self.llm, client=self.client, max_steps=30)
 
     async def generate_reply(self, messages: list[Message], context: dict | None = None) -> str:
         user_msg = messages[-1].get("content", "")
-        enhanced_prompt = f"{user_msg}. Use the'{self.default_database}' database"
-        response = await self.agent.run(enhanced_prompt)
-        sql_queries = self._extract_sql_queries(response)
-        if sql_queries:
-            formatted_response = "**SQL Query Executed:**\n```sql\n"
-            formatted_response += "\n\n".join(sql_queries)
-            formatted_response += "\n```\n\n**Results:**\n"
-            formatted_response += response
-        else:
-            formatted_response = response
+        enhanced_prompt = f"Use the database '{self.default_database}' for all queries. {user_msg}"
+        all_steps = []
+        final_output = ""
+        async for item in self.agent.stream(enhanced_prompt):
+            if isinstance(item, tuple) and len(item) == 2:
+                action, observation = item
+                all_steps.append({
+                    "action": action,
+                    "observation": observation
+                })
+            elif isinstance(item, str):
+                final_output = item
+        formatted_response = ""
+        if all_steps:
+            formatted_response += "**Execution Steps:**\n\n"
+            for i, step in enumerate(all_steps, 1):
+                action = step["action"]
+                observation = step["observation"]
+                formatted_response += f"**Step {i}:**\n"
+                formatted_response += f"- **Tool:** `{action.tool}`\n"
+                formatted_response += f"- **Input:** `{action.tool_input}`\n"
+                formatted_response += f"- **Observation:** {observation}\n\n"
+            formatted_response += "---\n\n"
+        formatted_response += "**Final Result:**\n" + (final_output or "[No output received]")
         return formatted_response
-
-    def _extract_sql_queries(self, text: str) -> list[str]:
-        queries = []
-        sql_pattern = r"```sql\s*(.*?)\s*```"
-        matches = re.findall(sql_pattern, text, re.DOTALL | re.IGNORECASE)
-        queries.extend(matches)
-        if not queries:
-            statement_pattern = r"\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b.*?;"
-            matches = re.findall(statement_pattern, text, re.DOTALL | re.IGNORECASE)
-            queries.extend(matches)
-        return queries
