@@ -84,3 +84,5 @@ class ChatLogger:
         line = f"[{timestamp}] event:{name} " + " ".join(parts) + "\n"
         with self._path.open("a", encoding="utf-8") as fh:
             fh.write(line)
+
+logger = ChatLogger()

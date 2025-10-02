@@ -42,7 +42,7 @@ class AI(ABC):
         self.config = config
 
     @abstractmethod
-    async def generate_reply(self, messages: list[Message], context: dict | None = None) -> str:  # pragma: no cover - abstract
+    async def generate_reply(self) -> str:  # pragma: no cover - abstract
         """Return an assistant reply for the given chat ``messages``.
 
         Args:

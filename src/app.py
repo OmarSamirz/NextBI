@@ -1,6 +1,5 @@
 import streamlit as st
 from dotenv import load_dotenv
-from mcp_use import Logger as MCPLogger
 
 import asyncio
 import datetime as dt
@@ -8,7 +7,7 @@ from typing import List
 
 from utils import get_ai
 from constants import ENV_PATH
-from modules.logger import ChatLogger
+from modules.logger import logger
 from ai_modules.base import Message, AI
 from constants import TERADATA_LOGO_PATH
 
@@ -29,10 +28,7 @@ def init_session_state() -> None:
     """Initialize session state with messages, logger, and AI instance."""
     if "messages" not in st.session_state:
         st.session_state["messages"] = []  # type: List[Message] # type: ignore
-    
-    if "logger" not in st.session_state:
-        st.session_state["logger"] = ChatLogger()
-    
+
     # Initialize event loop first
     get_or_create_event_loop()
     
@@ -47,9 +43,9 @@ def init_session_state() -> None:
                 loop.run_until_complete(warmup_func())
             elif warmup_func:
                 warmup_func()
-            st.session_state["logger"].event("ai.init", backend=ai_impl.__class__.__name__)
+            logger.event("ai.init", backend=ai_impl.__class__.__name__)
         except Exception as e:
-            st.session_state["logger"].event("ai.init.error", error=str(e))
+            logger.event("ai.init.error", error=str(e))
             st.session_state["ai_instance"] = None
 
 def render_sidebar() -> None:
@@ -60,17 +56,21 @@ def render_sidebar() -> None:
             st.image(str(TERADATA_LOGO_PATH))
 
         # Title
-        st.title("NextBI")
+        st.title("Select AI 2.0")
 
         # Description
         st.markdown(
             (
-                "<div class=\"sidebar-desc\" style=\"color:#888;\">"
-                "<p>NextBI is an intelligent business assistant that replaces traditional dashboards "
-                "by allowing executives and business users to get instant insights through conversation. "
-                "Instead of navigating reports, users simply ask questions in plain English, "
-                "and NextBI generates answers directly from enterprise data—powered by Teradata's MCP.</p>"
-                "</div>"
+            "<div class=\"sidebar-desc\" style=\"color:#888;>"
+                "<p>"
+                    "Select AI 2.0 is an intelligent business assistant designed to replace traditional dashboards "
+                    "by enabling executives and business users to gain instant insights through natural conversation. "
+                    "Instead of navigating complex reports, users can simply ask questions in plain English,"
+                    "and Select AI 2.0 delivers precise answers directly from enterprise data."
+                    "The application connects seamlessly with the Teradata database using the Teradata MCP server,"
+                    "making it easier than ever for users to interact with and explore their data."
+                "</p>"
+            "</div>"
             ),
             unsafe_allow_html=True,
         )
@@ -92,11 +92,10 @@ def render_chat(messages: List[Message]) -> None:
 
 async def generate_ai_reply() -> str:
     """Generate a reply from the AI backend."""
-    logger = st.session_state["logger"]
     backend: AI = st.session_state["ai_instance"]
 
     logger.event("ai.call.start", count=str(len(st.session_state["messages"])))
-    reply = await backend.generate_reply(st.session_state["messages"], context=None)
+    reply = await backend.generate_reply(st.session_state["messages"])
     logger.event("ai.call.end", chars=str(len(reply or "")))
     return reply
 
@@ -114,13 +113,13 @@ def handle_user_input(prompt: str) -> None:
         "ts": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
     }
     st.session_state["messages"].append(user_msg)
-    st.session_state["logger"].log(user_msg["role"], user_msg["content"])
+    logger.log(user_msg["role"], user_msg["content"])
 
     if st.session_state.get("ai_instance") is None:
         try:
             st.session_state["ai_instance"] = get_ai()
         except Exception as e:
-            st.session_state["logger"].event("ai.init.error", error=str(e))
+            logger.event("ai.init.error", error=str(e))
             st.error(f"Couldn't initialize AI backend: {e}")
             st.rerun()
 
@@ -145,7 +144,7 @@ def handle_user_input(prompt: str) -> None:
 
     # Append AI message
     st.session_state["messages"].append(ai_msg)
-    st.session_state["logger"].log(ai_msg["role"], ai_msg["content"])
+    logger.log(ai_msg["role"], ai_msg["content"])
 
     # Enforce max messages
     if len(st.session_state["messages"]) > MAX_MESSAGES:
@@ -155,7 +154,7 @@ def handle_user_input(prompt: str) -> None:
 
 # ---------------- MAIN APP ----------------
 def main():
-    st.set_page_config(page_title="NextBI", page_icon="💬", layout="wide")
+    st.set_page_config(page_title="Select AI 2.0", page_icon="💬", layout="wide")
     init_session_state()
 
     render_sidebar()
