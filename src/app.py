@@ -2,7 +2,6 @@ import streamlit as st
 from dotenv import load_dotenv
 from mcp_use import Logger as MCPLogger
 
-import os
 import asyncio
 import datetime as dt
 from typing import List

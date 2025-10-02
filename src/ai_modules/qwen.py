@@ -15,30 +15,8 @@ load_dotenv()
 
 class QwenModelWrapper(BaseChatModel):
 
-    def __init__(self,
-        name,
-        cache,
-        verbose,
-        callback,
-        tags,
-        metadata,
-        custom_get_token_ids,
-        callback_manager,
-        rate_limiter,
-        disable_streaming,
-    ):
-        super().__init__(
-            name,
-            cache,
-            verbose,
-            callback,
-            tags,
-            metadata,
-            custom_get_token_ids,
-            callback_manager,
-            rate_limiter,
-            disable_streaming,
-        )
+    def __init__(self):
+        super().__init__()
         self.model_id = os.getenv("Q_MODEL_NAME")
         self.device = torch.device(os.getenv("Q_DEVICE"))
         self.enable_thinking = eval(os.getenv("Q_ENABLE_THINKING"))
@@ -59,14 +37,37 @@ class QwenModelWrapper(BaseChatModel):
     def _prepare_message(self, messages):
         return [
             {
-                "role": messages[-1].get("role", "user"),
-                "content": messages[-1].get("content", "")
+                "role": messages[-1],
+                "content": messages[-1]
             }
         ]
 
     def _generate(self, messages, stop = None, run_manager = None, **kwargs):
         msg = self._prepare_message(messages)
-        
+        text = self.tokenizer.apply_chat_template(
+            msg,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=self.enable_thinking
+        )
+        model_inputs = self.tokenizer([text], return_tensors="pt").to(self.model.device)
+        generated_ids = self.model.generate(
+            **model_inputs,
+            max_new_tokens=32768
+        )
+
+        output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist()
+        # parsing thinking content
+        try:
+            # rindex finding 151668 (</think>)
+            index = len(output_ids) - output_ids[::-1].index(151668)
+        except ValueError:
+            index = 0
+
+        # thinking_content = self.tokenizer.decode(output_ids[:index], skip_special_tokens=True).strip("\n")
+        content = self.tokenizer.decode(output_ids[index:], skip_special_tokens=True).strip("\n")
+
+        return content
 
     def _llm_type(self):
         return "Qwen3"
@@ -89,6 +90,9 @@ class AIQwen(AI):
         self.mcp_config = MCP_CONFIG.copy()
         self.mcp_config["mcpServers"]["teradata"]["env"]["DATABASE_URI"] = os.getenv("DATABASE_URI")
         self.llm = QwenModelWrapper()
+        self.client = MCPClient.from_dict(config=self.mcp_config)
+        self.agent = MCPAgent(llm=self.llm, client=self.client, max_steps=30)
+
     async def generate_reply(self, messages: list[Message], context: dict | None = None) -> str:
         """Generate an assistant reply using OpenAI Chat Completions.
 
@@ -99,9 +103,5 @@ class AIQwen(AI):
         - Retries up to 3 times on exceptions with backoff (0.5s, 1s).
         """
         msg = messages[-1].get("content", "")
-
-        
-        self.client = MCPClient.from_dict(config=self.mcp_config)
-        self.agent = MCPAgent(llm=self.llm, client=self.client, max_steps=30)
 
         return await self.agent.run(msg)
