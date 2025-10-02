@@ -42,8 +42,9 @@ class AIGPT(AI):
     async def generate_reply(self, messages: list[Message]) -> str:
         msg = messages[-1].get("content", "")
         final_output = ""
-        async for step, item in enumerate(self.agent.stream(msg)):
-            logger.log(f"[Step {step+1}/{self.max_steps}]", "")
+        step = 1
+        async for item in self.agent.stream(msg):
+            logger.log(f"[Step {step}/{self.max_steps}]", "")
             if isinstance(item, tuple) and len(item) == 2:
                 action, observation = item
 
@@ -61,5 +62,7 @@ class AIGPT(AI):
                     logger.log("[MCP SQL Query]", sql_query)
             elif isinstance(item, str):
                 final_output = item
+            
+            step += 1
 
         return final_output

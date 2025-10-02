@@ -1,13 +1,5 @@
-[2025-10-02T11:14:04+00:00] LLM -> MCP tool call:: base_tableList
-[2025-10-02T11:15:37+00:00] LLM -> MCP tool call:: base_tableList
-[2025-10-02T11:15:37+00:00] LLM -> MCP tool input:: {'database_name': 'BANK_DB'}
-[2025-10-02T11:42:30+00:00] [LLM -> MCP Tool Call]: base_tableList
-[2025-10-02T11:42:31+00:00] [LLM -> MCP Tool Input]: {'database_name': 'BANK_DB'}
-[2025-10-02T11:42:47+00:00] [MCP Status]: success
-[2025-10-02T11:42:53+00:00] [MCP Results]: [{'TableName': 'user_query'}, {'TableName': 'transactions'}, {'TableName': 'branches'}]
-[2025-10-02T11:43:18+00:00] [MCP SQL Query]: select TableName from dbc.TablesV tv where tv.TableKind in ('T','V', 'O', 'Q') and UPPER(tv.DatabaseName) = UPPER('BANK_DB')
-[2025-10-02T11:43:34+00:00] [LLM -> MCP Tool Call]: base_tablePreview
-[2025-10-02T11:43:35+00:00] [LLM -> MCP Tool Input]: {'database_name': 'BANK_DB', 'table_name': 'branches'}
-[2025-10-02T11:43:42+00:00] [MCP Status]: success
-[2025-10-02T11:43:48+00:00] [MCP Results]: [{'branch_id': '99', 'branch_name': 'Citi Bank Wallsborough', 'governorate': 'Texas', 'branch_address': '56464 Scott Common Suite 460, Lake Matthewstad, WV 46597', 'latitude': 26.21412, 'longitude': -92.530807}, {'branch_id': '97', 'branch_name': 'Citi Bank Sarastad', 'governorate': 'Arizona', 'branch_address': 'PSC 4599, Box 7030, APO AP 39324', 'latitude': 47.158374, 'longitude': -110.26142}, {'branch_id': '36', 'branch_name': 'Citi Bank West Bradleyville', 'governorate': 'Utah', 'branch_address': '22377 Alexander Park, Lake Audreyshire, MO 21894', 'latitude': 47.629833, 'longitude': -112.552012}, {'branch_id': '59', 'branch_name': 'Citi Bank Kingville', 'governorate': 'South Carolina', 'branch_address': '38037 Patricia Fork Suite 826, West Teresa, FL 63178', 'latitude': 40.334788, 'longitude': -107.391757}, {'branch_id': '19', 'branch_name': 'Citi Bank Lisafort', 'governorate': 'Missouri', 'branch_address': '413 William Pine Apt. 683, West William, UT 00603', 'latitude': 39.844474, 'longitude': -76.065125}]
-[2025-10-02T11:43:55+00:00] [MCP SQL Query]: [No SQL query found]
+[2025-10-02T11:52:27+00:00] event:ai.backend.select backend=gpt
+[2025-10-02T11:52:28+00:00] event:ai.init backend=AIGPT
+[2025-10-02T11:53:12+00:00] user: What is the most contributor branch to our total transaction?
+[2025-10-02T11:53:12+00:00] event:ai.call.start count=1
+[2025-10-02T11:53:12+00:00] ai: [error] 'async_generator' object is not iterable
