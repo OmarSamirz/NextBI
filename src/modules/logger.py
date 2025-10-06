@@ -56,6 +56,9 @@ class ChatLogger:
         if not self._CFG.log_enabled:
             return
 
+        if len(content) > 100:
+            content = content[:100] + "..."
+
         timestamp = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
         # Replace newlines/CR with spaces, then collapse runs of whitespace
         safe_content = content.replace("\r", " ").replace("\n", " ")
