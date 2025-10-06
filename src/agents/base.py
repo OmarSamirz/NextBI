@@ -9,11 +9,12 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 import os
 import json
 import textwrap
+from string import Template
 from abc import ABC, abstractmethod
 from typing import Any, TypedDict, Literal, Optional
 
 from modules.logger import logger
-from constants import MCP_CONFIG, CHARTS_PATH, SYSTEM_PROMPT
+from constants import MCP_CONFIG, CHARTS_PATH, SYSTEM_PROMPT_PATH
 
 
 class Message(TypedDict, total=False):
@@ -28,7 +29,10 @@ class Agent(ABC):
         """Initialize the backend with an optional configuration object."""
         self.config = config
         self.mcp_config = MCP_CONFIG.copy()
-        self.system_prompt = SYSTEM_PROMPT.substitute(
+        with open(str(SYSTEM_PROMPT_PATH), "r") as f:
+            content = Template(f.read())
+            
+        self.system_prompt = content.safe_substitute(
             database_name=os.getenv("TD_NAME"),
             charts_path=CHARTS_PATH
         )

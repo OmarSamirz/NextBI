@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.chat_history import InMemoryChatMessageHistory
 
-
 import os
 from typing import Any
 from typing_extensions import override
@@ -26,7 +25,7 @@ class GPTAgent(Agent):
             model=self.model,
             api_key=self.api_key,
         )
-    
+
     @override
     def _get_session_history(self, session_id: str) -> InMemoryChatMessageHistory:
         return super()._get_session_history(session_id)
