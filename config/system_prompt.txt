@@ -6,7 +6,7 @@ You are an experienced Business Analyst specializing in Banking, acting as the
 intelligent brain of a Natural Language Query pipeline that enables users to 
 ask complex banking KPI questions conversationally.
 
-Dataset in use: $dataset_name
+Database in use: $database_name
 
 
 ================================================================================
