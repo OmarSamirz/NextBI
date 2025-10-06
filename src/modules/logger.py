@@ -1,16 +1,3 @@
-"""Lightweight append-only chat and event logger.
-
-Responsibilities:
-- Load logging config from env via :func:`config.Config.load` (LOG_ENABLED, LOG_FILE).
-- Provide two write-only methods: :meth:`ChatLogger.log` for chat lines,
-  :meth:`ChatLogger.event` for app events.
-- Write timestamps in UTC ISO-8601 with seconds precision.
-
-Behavior:
-- If ``LOG_ENABLED`` is falsey, logging is a no-op.
-- Newlines and CRs are sanitized from payloads; long whitespace is collapsed.
-"""
-
 from pathlib import Path
 
 import re
@@ -21,71 +8,54 @@ from modules.config import Config
 
 
 class ChatLogger:
-    """Simple, file-based logger for chat messages and app events.
+    """Simple, file-based logger for chat messages and app events."""
 
-    Chat line format:
-        [YYYY-MM-DDTHH:MM:SSZ] role: content
-    Event line format:
-        [YYYY-MM-DDTHH:MM:SSZ] event:<name> key=value ...
-    """
-
-    # Class-level configuration loaded from environment
     _CFG: Config = Config.load()
 
     def __init__(self, file_path: Optional[Path | str] = None) -> None:
-        """Initialize the logger with a file path.
+        """Initialize the logger with a unique file path per run."""
 
-        Args:
-            file_path: Optional override for the log file path. If None, uses LOG_FILE from config.
-        """
-        # Resolve path: explicit argument wins; otherwise use configured path
-        self._path = Path(file_path) if file_path is not None else self._CFG.log_file
-        # Ensure directory exists for the log file
-        try:
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            pass
+        # Determine base log file path (from config or override)
+        base_path = Path(file_path) if file_path is not None else self._CFG.log_file
+        base_dir = base_path.parent
+        base_name = base_path.stem
+        ext = base_path.suffix or ".log"
+
+        # Generate a unique filename using UTC timestamp
+        timestamp = dt.datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
+        unique_name = f"{base_name}_{timestamp}{ext}"
+        self._path = base_dir / unique_name
+
+        # Ensure directory exists
+        base_dir.mkdir(parents=True, exist_ok=True)
 
     def log(self, role: str, content: str) -> None:
-        """Append a single chat message to the log.
-
-        Args:
-            role: Message role ("user", "ai"/"assistant").
-            content: Message content to log.
-        """
+        """Append a single chat message to the log."""
         if not self._CFG.log_enabled:
             return
 
-        if len(content) > 100:
-            content = content[:100] + "..."
-
         timestamp = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
-        # Replace newlines/CR with spaces, then collapse runs of whitespace
-        safe_content = content.replace("\r", " ").replace("\n", " ")
-        safe_content = re.sub(r"\s+", " ", safe_content).strip()
+        safe_content = re.sub(r"\s+", " ", content.replace("\r", " ").replace("\n", " ")).strip()
         line = f"[{timestamp}] {role}: {safe_content}\n"
 
         with self._path.open("a", encoding="utf-8") as fh:
             fh.write(line)
 
     def event(self, name: str, **fields: str) -> None:
-        """Log a structured app event as a single line.
-
-        Example
-        -------
-        >>> logger.event("ai.init", backend="gpt", model="gpt-4o")
-        """
+        """Log a structured app event."""
         if not self._CFG.log_enabled:
             return
 
         timestamp = dt.datetime.now(dt.UTC).isoformat(timespec="seconds")
-        parts = []
-        for k, v in fields.items():
-            val = str(v).replace("\n", " ").replace("\r", " ")
-            val = re.sub(r"\s+", " ", val).strip()
-            parts.append(f"{k}={val}")
+        parts = [
+            f"{k}={re.sub(r'\\s+', ' ', str(v).replace(chr(10), ' ').replace(chr(13), ' ')).strip()}"
+            for k, v in fields.items()
+        ]
         line = f"[{timestamp}] event:{name} " + " ".join(parts) + "\n"
+
         with self._path.open("a", encoding="utf-8") as fh:
             fh.write(line)
 
+
+# Create global logger
 logger = ChatLogger()
