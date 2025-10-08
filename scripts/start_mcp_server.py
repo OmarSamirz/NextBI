@@ -284,37 +284,56 @@ Examples:
         if (args.http or args.sse) and args.health_check:
             print("   Health: performing startup probe...")
             process = subprocess.Popen(cmd_parts)
-            server_url = f"http://{args.host}:{args.port}/mcp/"
+            # If binding to 0.0.0.0 / ::, probe via localhost to avoid WinError 10049
+            probe_host = args.host
+            if probe_host in {"0.0.0.0", "::"}:
+                probe_host = "127.0.0.1"
+                print(f"   Health: substituting probe host '{args.host}' -> '{probe_host}'")
+            base_http = f"http://{probe_host}:{args.port}"
+            base_paths = ["/mcp/health", "/mcp/", "/health", "/"]
+            probe_urls = [base_http + p for p in base_paths]
             deadline = time.time() + args.health_timeout
             last_error = None
             success = False
-            probe_path_candidates = [server_url, server_url.rstrip('/') + '/health', server_url.rstrip('/') + '/']
-            while time.time() < deadline and process.poll() is None:
-                for probe_url in probe_path_candidates:
+            attempt = 0
+            headers = {"Accept": "text/event-stream,application/json;q=0.9,*/*;q=0.1"}
+            opener = urllib.request.build_opener()
+            while time.time() < deadline and process.poll() is None and not success:
+                for probe_url in probe_urls:
+                    attempt += 1
+                    req = urllib.request.Request(probe_url, headers=headers, method="GET")
                     try:
-                        with urllib.request.urlopen(probe_url, timeout=3) as resp:
+                        with opener.open(req, timeout=3) as resp:
                             code = resp.getcode()
-                            if 200 <= code < 500:  # Accept non-5xx as readiness (some MCP endpoints may 404 root)
-                                print(f"   Health: OK ({code}) at {probe_url}")
+                            if 200 <= code < 500:
+                                print(f"   Health: OK ({code}) at {probe_url} [attempt {attempt}]")
                                 success = True
                                 break
-                    except (urllib.error.URLError, urllib.error.HTTPError) as e:
-                        last_error = e
-                        # brief delay before next attempt
-                if success:
-                    break
-                time.sleep(0.75)
+                    except urllib.error.HTTPError as he:
+                        last_error = he
+                        # Accept HTTPError codes below 500 as readiness (e.g., 404 Not Found acceptable)
+                        if 400 <= he.code < 500:
+                            print(f"   Health: OK ({he.code}) at {probe_url} [attempt {attempt}] (acceptable HTTPError)")
+                            success = True
+                            break
+                    except urllib.error.URLError as ue:
+                        last_error = ue
+                if not success:
+                    time.sleep(0.75)
             if not success:
                 if process.poll() is not None:
                     print("✗ Server process exited prematurely during health check")
                     return process.returncode or 1
-                print(f"⚠ Health check did not confirm readiness within {args.health_timeout}s")
+                print(f"⚠ Health check did not confirm readiness within {args.health_timeout}s after {attempt} attempts")
                 if last_error:
                     print(f"   Last error: {last_error}")
+                    # Show failing probe URLs once for diagnostics
+                    print("   Probed URLs:")
+                    for u in probe_urls:
+                        print(f"     - {u}")
             else:
                 print("   Health: server ready")
             print("\n⏳ Press Ctrl+C to stop the server.")
-            # Wait on process
             process.wait()
             return process.returncode or 0
         else:
@@ -331,4 +350,3 @@ Examples:
 
 if __name__ == "__main__":
     sys.exit(main())
-    
