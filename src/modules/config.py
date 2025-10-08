@@ -85,6 +85,44 @@ def get_openai_config(base_dir: Optional[Path] = None) -> dict:
     client = OpenAI(**client_kwargs)
     return {"api_key": api_key, "model": model, "client": client}
 
+def get_google_genai_config(base_dir: Optional[Path] = None) -> dict:
+    """Load OpenAI settings from ``config/.env`` and return a ready client + settings.
+
+    Returns
+    -------
+    dict
+        Mapping with keys ``{"api_key", "model", "client"}``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``config/.env`` is missing.
+    RuntimeError
+        If the required ``GOOGLE_API_KEY`` is not set.
+    """
+    # Ensure .env is loaded and exists (reuses Config side-effect to load)
+    Config.load(base_dir=base_dir)
+
+    # Import locally to avoid hard dependency for non-OpenAI flows
+    from openai import OpenAI  # type: ignore
+
+    api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set in environment or config/.env")
+
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+
+    # Optional timeout to avoid hanging calls
+    try:
+        timeout = int(os.getenv("GOOGLE_TIMEOUT", "20").strip())
+    except ValueError:
+        timeout = 20
+
+    client_kwargs = {"api_key": api_key, "timeout": timeout}
+
+    client = OpenAI(**client_kwargs)
+    return {"api_key": api_key, "model": model, "client": client}
+
 def get_ai_backend(base_dir: Optional[Path] = None) -> str:
     """Return AI_BACKEND (defaults to 'gpt').
 

@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from typing import Any, TypedDict, Literal, Optional
 
 from modules.logger import logger
+from tools import current_datetime, add, subtract, multiply, divide
 from constants import MCP_CONFIG, CHARTS_PATH, SYSTEM_PROMPT_PATH
 
 
@@ -31,7 +32,7 @@ class Agent(ABC):
         self.mcp_config = MCP_CONFIG.copy()
         with open(str(SYSTEM_PROMPT_PATH), "r") as f:
             content = Template(f.read())
-            
+
         self.system_prompt = content.safe_substitute(
             database_name=os.getenv("TD_NAME"),
             charts_path=CHARTS_PATH
@@ -39,7 +40,6 @@ class Agent(ABC):
         self.mcp_config["mcpServers"]["teradata"]["env"]["DATABASE_URI"] = os.getenv("DATABASE_URI")
 
         self.chat_histories = {}
-
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
@@ -66,7 +66,7 @@ class Agent(ABC):
     async def create(cls, config: Any = None):
         self = cls(config)
         self.tools = await self.adapter.create_tools(self.client)
-        self.tools.append(PythonREPLTool())
+        self.tools.extend([PythonREPLTool(), current_datetime, add, subtract, multiply, divide])
 
         agent = create_tool_calling_agent(llm=self.llm, tools=self.tools, prompt=self.prompt)
         base_executor = AgentExecutor(
@@ -93,7 +93,8 @@ class Agent(ABC):
 
         intermediate_steps = result.get("intermediate_steps", [])
         for i, (action, observation) in enumerate(intermediate_steps, start=1):
-            logger.log(f"[Step {i}/{self.max_steps}]", "")
+            logger.log(f"[Step {i}]", "")
+            logger.log("[LLM Tool]", action.tool)
             tools_used.append(action.tool)
 
             try:

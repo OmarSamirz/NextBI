@@ -11,3 +11,4 @@ teradatagenai
 mcp-use
 langchain-mcp-adapters>=0.0.11
 langchain-openai
+langchain-google-genai

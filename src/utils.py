@@ -1,6 +1,6 @@
 
 from agents.base import Agent
-from agents.gpt import GPTAgent
+from agents import GPTAgent, GeminiAgent
 from modules.config import get_ai_backend
 
 async def get_ai() -> Agent:
@@ -26,5 +26,7 @@ async def get_ai() -> Agent:
 
     if backend == "gpt":
         return await GPTAgent.create()
+    if backend == "gemini":
+        return await GeminiAgent.create()
 
     raise ValueError(f"Unknown AI backend: {backend}")
