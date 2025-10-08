@@ -5,7 +5,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 BASE_DIR = Path(__file__).parents[1]
 
-CONFIG_PATH = BASE_DIR / "config"
+CONFIG_PATH = BASE_DIR
 
 ENV_PATH = CONFIG_PATH / ".env"
 

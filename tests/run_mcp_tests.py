@@ -17,10 +17,14 @@ import sys
 import time
 from contextlib import AsyncExitStack
 from datetime import datetime
+from pathlib import Path
 
 # MCP client imports
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class MCPTestRunner:
@@ -33,16 +37,23 @@ class MCPTestRunner:
         self.session: ClientSession | None = None
         self.exit_stack: AsyncExitStack | None = None
         self.verbose = verbose
+        self.case_timeout = float(os.getenv("READ_QUERY_TIMEOUT", os.getenv("CASE_TIMEOUT", "60")))
 
     def _find_project_root(self) -> str:
         """Find the project root directory (contains profiles.yml)."""
         current = os.path.abspath(os.getcwd())
-        while current != '/':
+        original_dir = current
+
+        while True:
             if os.path.exists(os.path.join(current, 'profiles.yml')):
                 return current
-            current = os.path.dirname(current)
 
-        return os.getcwd()
+            parent = os.path.dirname(current)
+            if parent == current:
+                # Reached filesystem root without finding profiles.yml
+                return original_dir
+
+            current = parent
 
     async def load_test_cases(self):
         """Load test cases from JSON files."""
@@ -247,9 +258,12 @@ class MCPTestRunner:
         sys.stdout.flush()  # Force flush to ensure clean output
 
         try:
-            response = await self.session.call_tool(
-                name=tool_name,
-                arguments=test_case.get('parameters', {})
+            response = await asyncio.wait_for(
+                self.session.call_tool(
+                    name=tool_name,
+                    arguments=test_case.get('parameters', {})
+                ),
+                timeout=self.case_timeout
             )
 
             duration = time.time() - start_time
@@ -343,6 +357,18 @@ class MCPTestRunner:
                     "error": "No content in response"
                 }
 
+        except asyncio.TimeoutError:
+            duration = time.time() - start_time
+            print(f"FAIL (timeout>{self.case_timeout:.0f}s) ({duration:.2f}s)")
+            return {
+                "tool": tool_name,
+                "test": test_case['name'],
+                "status": "FAIL",
+                "duration": duration,
+                "response_length": 0,
+                "error": f"Timed out after {self.case_timeout:.0f}s",
+                "full_response": None
+            }
         except Exception as e:
             duration = time.time() - start_time
             print(f"FAIL (exception) ({duration:.2f}s)")
@@ -434,9 +460,9 @@ class MCPTestRunner:
     def save_results(self):
         """Save detailed results to JSON file."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        test_reports_dir = "var/test-reports"
-        os.makedirs(test_reports_dir, exist_ok=True)
-        results_file = f"{test_reports_dir}/test_report_{timestamp}.json"
+        test_reports_dir = Path(__file__).resolve().parent / "test-reports"
+        test_reports_dir.mkdir(parents=True, exist_ok=True)
+        results_file = test_reports_dir / f"test_report_{timestamp}.json"
 
         detailed_results = {
             "timestamp": datetime.now().isoformat(),
@@ -472,9 +498,9 @@ async def main():
         print("Usage: python tests/run_mcp_tests.py <server_command> [test_cases_file1] [test_cases_file2] [...] [--verbose]")
         print("Examples:")
         print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server'")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/core_test_cases.json tests/cases/fs_test_cases.json")
-        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/cases/evs_test_cases.json --verbose")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/core_test_cases.json")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/core_test_cases.json tests/fs_test_cases.json")
+        print("  python tests/run_mcp_tests.py 'uv run teradata-mcp-server' tests/evs_test_cases.json --verbose")
         sys.exit(1)
 
     server_command = sys.argv[1].split()
@@ -487,7 +513,7 @@ async def main():
             test_cases_files.append(sys.argv[i])
 
     if not test_cases_files:
-        test_cases_files = ["tests/cases/core_test_cases.json"]
+        test_cases_files = ["tests/core_test_cases.json"]
 
     runner = MCPTestRunner(test_cases_files, verbose)
 
