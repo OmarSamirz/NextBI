@@ -31,6 +31,9 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import List, Optional
+import time
+import urllib.request
+import urllib.error
 
 
 def load_env_file():
@@ -194,12 +197,54 @@ Examples:
         action="store_true", 
         help="Enable info logging"
     )
+
+    # Health check options (only meaningful for HTTP/SSE) - default enabled
+    parser.add_argument(
+        "--no-health-check", dest="health_check", action="store_false", default=True,
+        help="Disable post-start health check ping (default: enabled)"
+    )
+    parser.add_argument(
+        "--health-timeout", type=int, default=20,
+        help="Health check overall timeout seconds (default: 20)"
+    )
     
     # Parse arguments
     args = parser.parse_args()
     
     # Load environment
     load_env_file()
+
+    # If no transport flag provided, fall back to environment MCP_TRANSPORT
+    if not args.http and not args.sse:
+        mcp_transport_env = os.getenv("MCP_TRANSPORT", "").strip().lower()
+        if mcp_transport_env == "http":
+            args.http = True
+            print("ℹ Using HTTP transport from MCP_TRANSPORT env")
+        elif mcp_transport_env == "sse":
+            args.sse = True
+            print("ℹ Using SSE transport from MCP_TRANSPORT env")
+        elif mcp_transport_env == "stdio":
+            # Explicit stdio declaration; nothing to set
+            print("ℹ Using stdio transport from MCP_TRANSPORT env")
+        elif mcp_transport_env:
+            print(f"⚠ Unrecognized MCP_TRANSPORT value '{mcp_transport_env}', defaulting to stdio")
+
+    # Allow env overrides for host/port only if user did not specify flags
+    # (Keep CLI precedence highest.)
+    if (args.http or args.sse):
+        # Only override if user kept defaults
+        if args.host == parser.get_default('host'):
+            env_host = os.getenv("MCP_HOST")
+            if env_host:
+                args.host = env_host
+                print("ℹ Host overridden from MCP_HOST env")
+        if args.port == parser.get_default('port'):
+            env_port = os.getenv("MCP_PORT")
+            if env_port and env_port.isdigit():
+                args.port = int(env_port)
+                print("ℹ Port overridden from MCP_PORT env")
+            elif env_port:
+                print(f"⚠ Ignoring non-numeric MCP_PORT value '{env_port}'")
     
     # Check database connection
     if not args.database_uri:
@@ -220,8 +265,11 @@ Examples:
     
     if args.http or args.sse:
         transport = "streamable-http" if args.http else "sse"
+        server_url = f"http://{args.host}:{args.port}/mcp/"
         print(f"   Transport: {transport}")
-        print(f"   Server URL: http://{args.host}:{args.port}/mcp/")
+        print(f"   Server URL: {server_url}")
+        # Extra explicit line for tooling / copy-paste convenience
+        print(f"   Copy: MCP_SERVER_URL={server_url}")
     else:
         print(f"   Transport: stdio (default)")
     
@@ -232,9 +280,47 @@ Examples:
     print()
     
     try:
-        # Start the server
-        result = subprocess.run(cmd_parts, check=False)
-        return result.returncode
+        # If HTTP/SSE with health check enabled, start asynchronously and poll
+        if (args.http or args.sse) and args.health_check:
+            print("   Health: performing startup probe...")
+            process = subprocess.Popen(cmd_parts)
+            server_url = f"http://{args.host}:{args.port}/mcp/"
+            deadline = time.time() + args.health_timeout
+            last_error = None
+            success = False
+            probe_path_candidates = [server_url, server_url.rstrip('/') + '/health', server_url.rstrip('/') + '/']
+            while time.time() < deadline and process.poll() is None:
+                for probe_url in probe_path_candidates:
+                    try:
+                        with urllib.request.urlopen(probe_url, timeout=3) as resp:
+                            code = resp.getcode()
+                            if 200 <= code < 500:  # Accept non-5xx as readiness (some MCP endpoints may 404 root)
+                                print(f"   Health: OK ({code}) at {probe_url}")
+                                success = True
+                                break
+                    except (urllib.error.URLError, urllib.error.HTTPError) as e:
+                        last_error = e
+                        # brief delay before next attempt
+                if success:
+                    break
+                time.sleep(0.75)
+            if not success:
+                if process.poll() is not None:
+                    print("✗ Server process exited prematurely during health check")
+                    return process.returncode or 1
+                print(f"⚠ Health check did not confirm readiness within {args.health_timeout}s")
+                if last_error:
+                    print(f"   Last error: {last_error}")
+            else:
+                print("   Health: server ready")
+            print("\n⏳ Press Ctrl+C to stop the server.")
+            # Wait on process
+            process.wait()
+            return process.returncode or 0
+        else:
+            # Simple blocking run
+            result = subprocess.run(cmd_parts, check=False)
+            return result.returncode
     except KeyboardInterrupt:
         print("\n\n🛑 Server stopped by user")
         return 0
@@ -245,3 +331,4 @@ Examples:
 
 if __name__ == "__main__":
     sys.exit(main())
+    
