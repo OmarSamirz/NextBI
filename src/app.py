@@ -114,17 +114,23 @@ def render_chat(messages: List[Message]) -> None:
 # -------------------------------------------------------------------------
 # AI MESSAGE HANDLING
 # -------------------------------------------------------------------------
-async def generate_ai_reply() -> str:
-    """Generate a reply from the AI backend."""
+async def generate_ai_reply() -> tuple[str, bool]:
+    """Generate a reply from the AI backend.
+
+    Returns
+    -------
+    tuple[str, bool]
+        (reply_text, is_plot)
+    """
     backend: Agent = st.session_state.get("ai_instance")
 
     if backend is None:
         raise RuntimeError("AI backend not initialized")
 
     logger.event("ai.call.start", count=str(len(st.session_state["messages"])))
-    reply = await backend.generate_reply(st.session_state["messages"])
-    logger.event("ai.call.end", chars=str(len(reply or "")))
-    return reply
+    reply_text, is_plot = await backend.generate_reply(st.session_state["messages"])
+    logger.event("ai.call.end", chars=str(len(reply_text or "")))
+    return reply_text, is_plot
 
 
 def handle_user_input(prompt: str) -> None:

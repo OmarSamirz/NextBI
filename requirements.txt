@@ -8,6 +8,3 @@ mcp>=1.1.0
 pyyaml>=6.0
 uv>=0.8.22
 teradatagenai
-mcp-use
-langchain-mcp-adapters>=0.0.11
-langchain-openai
