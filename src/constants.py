@@ -1,8 +1,6 @@
 import torch
 from pathlib import Path
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
 BASE_DIR = Path(__file__).parents[1]
 
 CONFIG_PATH = BASE_DIR

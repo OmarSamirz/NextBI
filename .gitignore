@@ -1,4 +1,4 @@
 .env
 **/__pycache__/*
 charts/*
-tests/test-reports/
+logs/*
