@@ -57,6 +57,7 @@ def init_session_state() -> None:
             elif warmup_func:
                 warmup_func()
             logger.event("ai.init", backend=ai_impl.__class__.__name__)
+            logger.event("ai.type", model=ai_impl.model)
         except Exception as e:
             logger.event("ai.init.error", error=str(e))
             st.session_state["ai_instance"] = None

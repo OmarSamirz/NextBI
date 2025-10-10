@@ -16,14 +16,7 @@ async def get_ai() -> Agent:
         A ready-to-use backend implementing :class:`AI`.
     """
     backend = get_ai_backend()
-
-    try:
-        # Late import to avoid import-time .env side effects in tests
-        from modules.logger import ChatLogger  # type: ignore
-        ChatLogger().event("ai.backend.select", backend=backend)
-    except Exception:
-        pass
-
+    
     if backend == "gpt":
         return await GPTAgent.create()
     if backend == "gemini":
