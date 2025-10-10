@@ -3,7 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parents[1]
 
-CONFIG_PATH = BASE_DIR
+CONFIG_PATH = BASE_DIR / "config"
 
 ENV_PATH = CONFIG_PATH / ".env"
 
