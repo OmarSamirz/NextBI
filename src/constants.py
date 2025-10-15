@@ -1,4 +1,3 @@
-import torch
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parents[1]
@@ -7,7 +6,12 @@ CONFIG_PATH = BASE_DIR / "config"
 
 ENV_PATH = CONFIG_PATH / ".env"
 
-SYSTEM_PROMPT_PATH = CONFIG_PATH / "system_prompt.txt"
+
+PLOT_AGENT_SYSTEM_PROMPT_PATH = CONFIG_PATH / "plot_agent_system_prompt.txt"
+
+TERADATA_AGENT_SYSTEM_PROMPT_PATH = CONFIG_PATH / "teradata_agent_system_prompt.txt"
+
+MANAGER_AGENT_SYSTEM_PROMPT_PATH = CONFIG_PATH / "manager_agent_system_prompt.txt"
 
 ASSETS_PATH = BASE_DIR / "assets"
 

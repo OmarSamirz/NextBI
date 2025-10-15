@@ -2,7 +2,6 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.chat_history import InMemoryChatMessageHistory
 
-from typing import Any
 from typing_extensions import override
 
 from constants import ENV_PATH
@@ -14,8 +13,8 @@ load_dotenv(ENV_PATH)
 
 class GPTAgent(Agent):
 
-    def __init__(self, config: Any = None) -> None:
-        super().__init__(config)
+    def __init__(self) -> None:
+        super().__init__()
         cfg = get_openai_config()
         self.api_key = cfg["api_key"]
         self.model = cfg["model"]
@@ -30,8 +29,8 @@ class GPTAgent(Agent):
 
     @override
     @classmethod
-    async def create(cls, config: Any = None):
-        return await super().create(config)
+    async def create(cls):
+        return await super().create()
 
     @override
     def _process_intermediate_logs(self, result):

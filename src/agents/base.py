@@ -13,11 +13,11 @@ import json
 import textwrap
 from string import Template
 from abc import ABC, abstractmethod
-from typing import Any, TypedDict, Literal, Optional
+from typing import TypedDict, Literal, Optional
 
 from modules.logger import logger
 from internal_tools import current_datetime, add, subtract, multiply, divide
-from constants import MCP_CONFIG, CHARTS_PATH, SYSTEM_PROMPT_PATH
+from constants import MCP_CONFIG, CHARTS_PATH, TERADATA_AGENT_SYSTEM_PROMPT_PATH
 
 
 class Message(TypedDict, total=False):
@@ -28,14 +28,13 @@ class Message(TypedDict, total=False):
 
 class Agent(ABC):
 
-    def __init__(self, config: Any = None) -> None:
+    def __init__(self) -> None:
         """Initialize the backend with an optional configuration object."""
-        self.config = config
         self.max_iterations = int(os.getenv("MAX_ITERATIONS", 30))
         self.verbose = eval(os.getenv("VERBOSE", False))
         self.return_intermediate_steps = eval(os.getenv("RETURN_INTERMEDIATE_STEPS", False))
         self.mcp_config = MCP_CONFIG.copy()
-        with open(str(SYSTEM_PROMPT_PATH), "r") as f:
+        with open(str(TERADATA_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
             content = Template(f.read())
 
         self.system_prompt = content.safe_substitute(
@@ -68,8 +67,8 @@ class Agent(ABC):
 
     @classmethod
     @abstractmethod
-    async def create(cls, config: Any = None):
-        self = cls(config)
+    async def create(cls):
+        self = cls()
         self.tools = await self.adapter.create_tools(self.client)
         self.tools.extend([PythonREPLTool(), DuckDuckGoSearchResults(), current_datetime, add, subtract, multiply, divide])
 
@@ -125,7 +124,7 @@ class Agent(ABC):
                             sql_message.append(f"\n```sql\n{wrapped_sql}\n```\n")
 
         found_plot = "Python_REPL" in tools_used
-        final_sql_message = "\n".join(sql_message) if found_sql else ""
+        final_sql_message = "\n".join(sql_message) if found_sql else None
 
         return final_sql_message, found_plot
 

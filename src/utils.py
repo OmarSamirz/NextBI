@@ -1,7 +1,13 @@
+from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from agents.base import Agent
 from agents import GPTAgent, GeminiAgent
-from modules.config import get_ai_backend
+from graph_agents.plot_agent import PlotAgent
+from graph_agents.multi_agent import MultiAgent
+from graph_agents.manager_agent import ManagerAgent
+from graph_agents.teradata_agent import TeradataAgent
+from modules.config import get_ai_backend, get_openai_config, get_google_genai_config
 
 async def get_ai() -> Agent:
     """Construct and return a concrete :class:`AI` backend based on ``AI_BACKEND``.
@@ -23,3 +29,31 @@ async def get_ai() -> Agent:
         return await GeminiAgent.create()
 
     raise ValueError(f"Unknown AI backend: {backend}")
+
+async def get_multi_agent() -> MultiAgent:
+    backend = get_ai_backend()
+    
+    llm = None
+    if backend == "gpt":
+        cfg = get_openai_config()
+        llm = ChatOpenAI(
+            model=cfg["model"],
+            api_key=cfg["api_key"]
+        )
+    elif backend == "gemini":
+        cfg = get_google_genai_config()
+        llm = ChatGoogleGenerativeAI(
+            model=cfg["model"],
+            api_key=cfg["api_key"]
+        )
+    else:
+        raise ValueError(f"Unknown AI backend: {backend}")
+
+
+    teradata_agent = await TeradataAgent.create(llm)
+    plot_agent = await PlotAgent.create(llm)
+    manager_agent = await ManagerAgent.create(llm)
+
+    multi_agent = MultiAgent(manager_agent, plot_agent, teradata_agent)
+
+    return multi_agent

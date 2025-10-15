@@ -13,5 +13,7 @@ langchain-mcp-adapters>=0.0.11
 langchain-openai>=0.3.33
 langchain-google-genai>=2.1.12
 langchain-community>=0.3.31
+langchain-experimental>=0.3.4
 duckduckgo-search>=8.1.1
 ddgs>=9.6.0
+langgraph>=0.6.10

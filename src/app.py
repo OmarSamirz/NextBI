@@ -7,9 +7,9 @@ import asyncio
 import datetime as dt
 from typing import List
 
-from utils import get_ai
 from constants import ENV_PATH
 from modules.logger import logger
+from utils import get_multi_agent
 from agents.base import Message, Agent
 from constants import TERADATA_LOGO_PATH, CHARTS_PATH
 from modules.event_loop_thread import EventLoopThread
@@ -32,7 +32,7 @@ def get_or_create_event_loop():
 # SESSION STATE INITIALIZATION
 # -------------------------------------------------------------------------
 def init_session_state() -> None:
-    """Initialize session state with messages, logger, and AI instance."""
+    """Initialize session state with messages and basic setup."""
     if "messages" not in st.session_state:
         st.session_state["messages"] = []  # type: List[Message] # type: ignore
 
@@ -40,27 +40,43 @@ def init_session_state() -> None:
     if "ai_instance" not in st.session_state:
         st.session_state["ai_instance"] = None
 
-    # Initialize event loop
+    # Initialize event loop (lightweight operation)
     get_or_create_event_loop()
     
-    # Only initialize AI if it hasn't been initialized yet
-    if st.session_state["ai_instance"] is None:
-        try:
+    # Flag to track if we've attempted initialization
+    if "init_attempted" not in st.session_state:
+        st.session_state["init_attempted"] = False
+
+
+def initialize_ai_backend() -> bool:
+    """
+    Initialize the AI backend. Returns True on success, False on failure.
+    This is separated from init_session_state for lazy initialization.
+    """
+    try:
+        loop = st.session_state["event_loop"]
+        ai_impl = loop.run_coroutine(get_multi_agent())
+        st.session_state["ai_instance"] = ai_impl
+        
+        # Warmup: optional
+        warmup_func = getattr(ai_impl, "warmup", None)
+        if warmup_func and asyncio.iscoroutinefunction(warmup_func):
             loop = st.session_state["event_loop"]
-            ai_impl = loop.run_coroutine(get_ai())
-            st.session_state["ai_instance"] = ai_impl
-            # Warmup: optional
-            warmup_func = getattr(ai_impl, "warmup", None)
-            if warmup_func and asyncio.iscoroutinefunction(warmup_func):
-                loop = st.session_state["event_loop"]
-                loop.run_coroutine(warmup_func())
-            elif warmup_func:
-                warmup_func()
-            logger.event("ai.init", backend=ai_impl.__class__.__name__)
-            logger.event("ai.type", model=ai_impl.model)
-        except Exception as e:
-            logger.event("ai.init.error", error=str(e))
-            st.session_state["ai_instance"] = None
+            loop.run_coroutine(warmup_func())
+        elif warmup_func:
+            warmup_func()
+        
+        logger.event("ai.init", backend=ai_impl.__class__.__name__)
+        # logger.event("ai.type", model=ai_impl.model)
+        st.session_state["init_attempted"] = True
+        return True
+        
+    except Exception as e:
+        logger.event("ai.init.error", error=str(e))
+        st.session_state["ai_instance"] = None
+        st.session_state["init_attempted"] = True
+        st.error(f"Failed to initialize AI backend: {e}")
+        return False
 
 
 # -------------------------------------------------------------------------
@@ -129,7 +145,13 @@ async def generate_ai_reply() -> tuple[str, bool]:
         raise RuntimeError("AI backend not initialized")
 
     logger.event("ai.call.start", count=str(len(st.session_state["messages"])))
-    reply_text, is_plot = await backend.generate_reply(st.session_state["messages"])
+    if hasattr(backend, "generate_reply"):
+        reply_text, is_plot = await backend.generate_reply(st.session_state["messages"])
+    if hasattr(backend, "run"):
+        user_query = st.session_state["messages"][-1].get("content", "")
+        state = await backend.run(user_query)
+        print(state)
+        reply_text, is_plot = state["response"], state["is_plot"]
     logger.event("ai.call.end", chars=str(len(reply_text or "")))
     return reply_text, is_plot
 
@@ -140,10 +162,13 @@ def handle_user_input(prompt: str) -> None:
     if not text:
         return
 
-    # Check if AI is initialized before processing
+    # Lazy initialization: Initialize AI backend on first message
     if st.session_state.get("ai_instance") is None:
-        st.error("AI backend is still initializing. Please wait a moment and try again.")
-        return
+        with st.spinner("🔄 Initializing AI backend for the first time..."):
+            success = initialize_ai_backend()
+            if not success:
+                st.error("Failed to initialize AI backend. Please refresh the page and try again.")
+                return
 
     # Add user message
     user_msg = {
@@ -166,7 +191,7 @@ def handle_user_input(prompt: str) -> None:
     try:
         with st.spinner("Thinking..."):
             reply, is_plot = loop_thread.run_coroutine(generate_ai_reply())
-            
+
             # Handle chart generation
             if is_plot:
                 try:
@@ -175,17 +200,17 @@ def handle_user_input(prompt: str) -> None:
                         # Get the most recently created chart
                         chart_files = [os.path.join(str(CHARTS_PATH), f) for f in charts]
                         chart_path = max(chart_files, key=os.path.getctime)
-                        
+
                         # Load the image using PIL
                         with Image.open(chart_path) as img:
                             chart_image = img.copy()
-                        
+
                         # Optionally clean up the file after loading
                         try:
                             os.remove(chart_path)
                         except Exception as cleanup_error:
                             print(f"Warning: Could not delete chart file: {cleanup_error}")
-                            
+
                 except Exception as chart_error:
                     print(f"Error loading chart: {chart_error}")
                     st.warning(f"Could not load chart: {chart_error}")
@@ -203,7 +228,7 @@ def handle_user_input(prompt: str) -> None:
             "content": reply if (reply and reply.strip()) else "[empty response]",
             "ts": dt.datetime.now(dt.UTC).isoformat(timespec="seconds"),
         }
-        
+
         # Attach the chart to the message if one was generated
         if chart_image is not None:
             ai_msg["chart"] = chart_image
@@ -223,17 +248,21 @@ def handle_user_input(prompt: str) -> None:
 # -------------------------------------------------------------------------
 def main():
     st.set_page_config(page_title="Select AI 2.0", page_icon="💬", layout="wide")
+    
+    # Initialize basic session state (lightweight)
     init_session_state()
 
+    # Render sidebar
     render_sidebar()
-    
-    # Show loading state if AI is not ready
-    if st.session_state.get("ai_instance") is None:
-        with st.spinner("Initializing AI backend..."):
-            st.info("Please wait while the AI backend is being initialized.")
-    
+
+    # Render chat history
     render_chat(st.session_state["messages"])
 
+    # Show welcome message if no messages yet
+    if len(st.session_state["messages"]) == 0:
+        st.info("👋 Welcome to Select AI 2.0! Ask me anything about your enterprise data.")
+
+    # Chat input (always visible)
     prompt = st.chat_input("Type a message and press Enter")
     if prompt:
         handle_user_input(prompt)

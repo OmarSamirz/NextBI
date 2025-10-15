@@ -1,5 +1,6 @@
 from langchain.agents import tool
 
+from typing import Union
 from datetime import datetime
 
 @tool
@@ -12,23 +13,23 @@ def current_datetime() -> str:
     return now.strftime("Today is %Y-%m-%d and the current time is %H:%M:%S")
 
 @tool
-def multiply(first: float, second: float) -> float:
-    """Multiply two float numbers together."""
+def multiply(first: Union[float, int], second: Union[float, int]) -> Union[float, int]:
+    """Multiply two float or integer numbers together."""
     return first * second
 
 @tool
-def add(first: float, second: float) -> float:
-    "Add two float numbers."
+def add(first: Union[float, int], second: Union[float, int]) -> Union[float, int]:
+    "Add two float or integer numbers."
     return first + second
 
 @tool
-def subtract(first: float, second: float) -> float:
-    "Subtract two float numbers."
+def subtract(first: Union[float, int], second: Union[float, int]) -> Union[float, int]:
+    "Subtract two float or integer numbers."
     return first - second
 
 @tool
-def divide(first: float, second: float) -> float:
-    "Divide two float numbers."
+def divide(first: Union[float, int], second: Union[float, int]) -> Union[float, int]:
+    "Divide two float or integer numbers."
     if second == 0:
         return 0
 
