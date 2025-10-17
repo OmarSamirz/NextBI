@@ -1,8 +1,9 @@
 from langchain.base_language import BaseLanguageModel
+from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_experimental.tools.python.tool import PythonAstREPLTool
 from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_experimental.tools.python.tool import PythonAstREPLTool
+
 
 from typing import Self
 from string import Template
@@ -14,9 +15,9 @@ from constants import CHARTS_PATH, PLOT_AGENT_SYSTEM_PROMPT_PATH
 
 
 class PlotAgent(GraphAgent):
-    
-    def __init__(self, llm: BaseLanguageModel):
-        super().__init__(llm)
+
+    def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
+        super().__init__(llm, memory)
         with open(str(PLOT_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
             content = Template(f.read())
 
@@ -24,7 +25,6 @@ class PlotAgent(GraphAgent):
             charts_path=CHARTS_PATH
         )
 
-        self.chat_histories = {}
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
@@ -34,37 +34,32 @@ class PlotAgent(GraphAgent):
 
     @override
     @classmethod
-    async def create(cls: type[Self], llm: BaseLanguageModel) -> Self:
-        self = cls(llm)
+    async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
+        self = cls(llm, memory)
         self.tools = [PythonAstREPLTool()]
         
         agent = create_tool_calling_agent(llm=llm, tools=self.tools, prompt=self.prompt)
-        base_executor = AgentExecutor(
+        self.agent_executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
+            memory=self.memory,
             verbose=self.verbose,
             max_iterations=self.max_iterations,
             return_intermediate_steps=self.return_intermediate_steps
-        )
-        self.agent_executor = RunnableWithMessageHistory(
-            base_executor,
-            self._get_session_history,
-            input_messages_key="input",
-            history_messages_key="chat_history"
         )
 
         return self
 
     @override
-    async def __call__(self, state: MultiAgentState):
+    async def __call__(self, state: MultiAgentState) -> MultiAgentState:
         user_query = state.get("user_query")
         explanation = state.get("explanation", None)
         input_message = user_query + f"\n\nExplanation: {explanation}.\n" if explanation is not None else user_query
 
-        _ = await self.agent_executor.ainvoke(
+        response = await self.agent_executor.ainvoke(
             {"input": input_message},
-            config={"configurable": {"session_id": self.session_id}}
         )
         state["is_plot"] = True
+        state["plot_agent_response"] = response["output"]
 
         return state

@@ -8,13 +8,10 @@ GUIDELINES:
 - Save plots only in the directory specified by `$charts_path`.
 - Always call `plt.close()` after saving the figure to prevent memory leaks.
 - Do NOT print or return the file path of the saved image.
-- After saving, provide a concise, human-readable explanation describing:
-  • The type of chart created (e.g., line, bar, scatter)
-  • The variables or metrics plotted
-  • The key insight or trend shown by the visualization.
+- After saving, provide a concise, human-readable explanation.
 
 ADDITIONAL INSTRUCTIONS:
-- Select the most suitable chart type for the data (e.g., scatter for correlations, bar for comparisons, line for time series).
+- Select the most suitable chart type for the data.
 - Ensure labels, titles, and legends are informative and clear.
 - Do not modify data unless explicitly instructed.
 - If the user’s request lacks enough information to plot, clearly specify what additional details are needed.

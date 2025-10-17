@@ -1,7 +1,7 @@
 from langchain.base_language import BaseLanguageModel
+from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
-from langchain_core.runnables.history import RunnableWithMessageHistory
 
 import json
 from typing import Self
@@ -14,14 +14,11 @@ from constants import MANAGER_AGENT_SYSTEM_PROMPT_PATH
 
 class ManagerAgent(GraphAgent):
 
-    def __init__(self, llm: BaseLanguageModel) -> None:
-        super().__init__(llm)
+    def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
+        super().__init__(llm, memory)
         with open(str(MANAGER_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
-            content = f.read()
+            self.system_prompt = f.read()
 
-        self.system_prompt = content
-
-        self.chat_histories = {}
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self.system_prompt),
             MessagesPlaceholder(variable_name="chat_history"),
@@ -31,32 +28,35 @@ class ManagerAgent(GraphAgent):
 
     @override
     @classmethod
-    async def create(cls: type[Self], llm: BaseLanguageModel) -> Self:
-        self = cls(llm)
+    async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
+        self = cls(llm, memory)
         self.tools = []
 
         agent = create_tool_calling_agent(llm=self.llm, tools=self.tools, prompt=self.prompt)
-        base_executor = AgentExecutor(
+        self.agent_executor = AgentExecutor(
             agent=agent,
             tools=self.tools,
+            memory=self.memory,
             verbose=self.verbose,
             max_iterations=self.max_iterations,
             return_intermediate_steps=self.return_intermediate_steps
-        )
-        self.agent_executor = RunnableWithMessageHistory(
-            base_executor,
-            self._get_session_history,
-            input_messages_key="input",
-            history_messages_key="chat_history"
         )
 
         return self
 
     @override
-    async def __call__(self, state: MultiAgentState):
+    async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        user_query = f"User Query:\n{state['user_query']}"
+        td_agent_response = state.get("td_agent_response", None)
+        plot_agent_response = state.get("plot_agent_response", None)
+
+        if td_agent_response is not None:
+            user_query += f"\n\nTeradata Agent Response:\n{td_agent_response}"
+        if plot_agent_response is not None:
+            user_query += f"\n\nPlot Agent Response:\n{plot_agent_response}"
+        
         result = await self.agent_executor.ainvoke(
-            {"input": state["user_query"]},
-            config={"configurable": {"session_id": self.session_id}}
+            {"input": user_query},
         )
 
         decision, message, explanation = None, None, None
@@ -74,12 +74,12 @@ class ManagerAgent(GraphAgent):
             state["manager_decision"] = "plot"
         elif "done" in decision:
             state["manager_decision"] = "done"
-            state["done"] = True
         else:
             state["manager_decision"] = "done"
-            state["done"] = True
-        
+
         state["response"] = message if message is not None else result["output"]
         state["explanation"] = explanation if explanation is not None else None
+
+        state["messages"].append({"role": "manager", "content": state["response"]})
 
         return state

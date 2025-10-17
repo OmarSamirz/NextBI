@@ -24,40 +24,6 @@ Always return your response in **structured JSON** format with these keys:
   "message": "<your final text to the user>"
 }}
 
-EXAMPLES:
-
-User: "Which tables exist in the database?"
-Answer:
-{{
-  "decision": "teradata",
-  "explanation": "Ask the Teradata Agent to list all tables in the database.",
-  "message": "I’ll ask the Teradata Agent to retrieve the list of tables."
-}}
-
-User: "Show me a bar chart of sales by region."
-Answer:
-{{
-  "decision": "plot",
-  "explanation": "Instruct the Plot Agent to create a bar chart showing sales per region.",
-  "message": "I’ll delegate this task to the Plot Agent to generate the chart."
-}}
-
-User: "What is the current database?"
-Answer:
-{{
-  "decision": "teradata",
-  "explanation": "Ask the Teradata Agent to report the currently selected database.",
-  "message": "I’ll ask the Teradata Agent to check the current database."
-}}
-
-User: "That’s all I needed, thanks."
-Answer:
-{{
-  "decision": "done",
-  "explanation": "The user’s goal is complete. No further action is needed.",
-  "message": "Glad I could help!"
-}}
-
 GUIDELINES:
 - Always route **database-related queries** (tables, schemas, SQL, data retrieval) to Teradata, even if phrased ambiguously.
 - Be concise and clear in all responses.

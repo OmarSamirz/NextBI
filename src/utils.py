@@ -1,5 +1,6 @@
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.memory import ConversationBufferWindowMemory
 
 from agents.base import Agent
 from agents import GPTAgent, GeminiAgent
@@ -49,11 +50,16 @@ async def get_multi_agent() -> MultiAgent:
     else:
         raise ValueError(f"Unknown AI backend: {backend}")
 
+    memory = ConversationBufferWindowMemory(
+        k=15,
+        output_key="output",
+        return_messages=True,
+        memory_key="chat_history",
+    )
+    teradata_agent = await TeradataAgent.create(llm, memory)
+    plot_agent = await PlotAgent.create(llm, memory)
+    manager_agent = await ManagerAgent.create(llm, memory)
 
-    teradata_agent = await TeradataAgent.create(llm)
-    plot_agent = await PlotAgent.create(llm)
-    manager_agent = await ManagerAgent.create(llm)
-
-    multi_agent = MultiAgent(manager_agent, plot_agent, teradata_agent)
+    multi_agent = MultiAgent(memory, manager_agent, plot_agent, teradata_agent)
 
     return multi_agent

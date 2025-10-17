@@ -1,5 +1,5 @@
 from langchain.base_language import BaseLanguageModel
-from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain.memory.chat_memory import BaseChatMemory
 
 import os
 from typing import Self
@@ -10,10 +10,9 @@ from graph_agents.state import MultiAgentState
 
 class GraphAgent(ABC):
 
-    def __init__(self, llm: BaseLanguageModel) -> None:
+    def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         self.llm = llm
-        self.chat_histories = {}
-        self.session_id = "default"
+        self.memory = memory
         self.max_iterations = int(os.getenv("MAX_ITERATIONS", 30))
         self.verbose = eval(os.getenv("VERBOSE", False))
         self.return_intermediate_steps = eval(os.getenv("RETURN_INTERMEDIATE_STEPS", False))
@@ -23,15 +22,9 @@ class GraphAgent(ABC):
 
     @classmethod
     @abstractmethod
-    async def create(cls: type[Self], *args, **kwargs) -> Self:
+    async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
         ...
 
-    def _get_session_history(self, session_id: str) -> InMemoryChatMessageHistory:
-        if session_id not in self.chat_histories:
-            self.chat_histories[session_id] = InMemoryChatMessageHistory()
-
-        return self.chat_histories[session_id]
-
     @abstractmethod
-    async def __call__(self, state: MultiAgentState):
+    async def __call__(self, state: MultiAgentState) -> MultiAgentState:
         ...
