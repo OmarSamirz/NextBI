@@ -20,7 +20,7 @@ class TeradataAgent(GraphAgent):
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
         self.mcp_config = MCP_CONFIG.copy()
-        with open(str(TERADATA_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
+        with open(str(TERADATA_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
             content = Template(f.read())
 
         self.system_prompt = content.safe_substitute(

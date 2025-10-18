@@ -18,7 +18,7 @@ class PlotAgent(GraphAgent):
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
-        with open(str(PLOT_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
+        with open(str(PLOT_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
             content = Template(f.read())
 
         self.system_prompt = content.safe_substitute(

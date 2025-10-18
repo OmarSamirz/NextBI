@@ -1,4 +1,3 @@
-import streamlit as st
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -11,13 +10,14 @@ from typing_extensions import override
 from graph_agents.base import GraphAgent
 from graph_agents.state import MultiAgentState
 from constants import MANAGER_AGENT_SYSTEM_PROMPT_PATH
+from internal_tools import current_datetime, current_dollar_pound_exchange_rate
 
 
 class ManagerAgent(GraphAgent):
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
-        with open(str(MANAGER_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
+        with open(str(MANAGER_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
             self.system_prompt = f.read()
 
         self.prompt = ChatPromptTemplate.from_messages([
