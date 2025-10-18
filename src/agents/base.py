@@ -5,7 +5,6 @@ from langchain_experimental.tools.python.tool import PythonREPLTool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_community.tools import DuckDuckGoSearchResults
 
 import re
 import os
@@ -16,7 +15,6 @@ from abc import ABC, abstractmethod
 from typing import TypedDict, Literal, Optional
 
 from modules.logger import logger
-from internal_tools import current_datetime, add, subtract, multiply, divide
 from constants import MCP_CONFIG, CHARTS_PATH, TERADATA_AGENT_SYSTEM_PROMPT_PATH
 
 
@@ -70,7 +68,7 @@ class Agent(ABC):
     async def create(cls):
         self = cls()
         self.tools = await self.adapter.create_tools(self.client)
-        self.tools.extend([PythonREPLTool(), DuckDuckGoSearchResults(), current_datetime, add, subtract, multiply, divide])
+        self.tools.extend([PythonREPLTool()])
 
         agent = create_tool_calling_agent(llm=self.llm, tools=self.tools, prompt=self.prompt)
         base_executor = AgentExecutor(
