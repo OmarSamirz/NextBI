@@ -1,20 +1,17 @@
 from PIL import Image
 import streamlit as st
-from dotenv import load_dotenv
 
 import os
 import asyncio
 import datetime as dt
 from typing import List
 
-from constants import ENV_PATH
 from modules.logger import logger
 from utils import get_multi_agent
 from agents.base import Message, Agent
 from constants import TERADATA_LOGO_PATH, CHARTS_PATH
 from modules.event_loop_thread import EventLoopThread
 
-load_dotenv(ENV_PATH)
 
 MAX_MESSAGES: int = 100  # Cap in-memory history length
 
@@ -150,7 +147,6 @@ async def generate_ai_reply() -> tuple[str, bool]:
     if hasattr(backend, "run"):
         user_query = st.session_state["messages"][-1].get("content", "")
         state = await backend.run(user_query)
-        print(state)
         reply_text, is_plot = state["response"], state["is_plot"]
     logger.event("ai.call.end", chars=str(len(reply_text or "")))
     return reply_text, is_plot
@@ -162,13 +158,13 @@ def handle_user_input(prompt: str) -> None:
     if not text:
         return
 
-    # Lazy initialization: Initialize AI backend on first message
-    if st.session_state.get("ai_instance") is None:
-        with st.spinner("🔄 Initializing AI backend for the first time..."):
-            success = initialize_ai_backend()
-            if not success:
-                st.error("Failed to initialize AI backend. Please refresh the page and try again.")
-                return
+    # # Lazy initialization: Initialize AI backend on first message
+    # if st.session_state.get("ai_instance") is None:
+    #     with st.spinner("🔄 Initializing AI backend for the first time..."):
+    #         success = initialize_ai_backend()
+    #         if not success:
+    #             st.error("Failed to initialize AI backend. Please refresh the page and try again.")
+    #             return
 
     # Add user message
     user_msg = {
@@ -251,6 +247,13 @@ def main():
     
     # Initialize basic session state (lightweight)
     init_session_state()
+
+    if not st.session_state.get("init_attempted", False):
+        with st.spinner("⚙️ Initializing AI backend..."):
+            success = initialize_ai_backend()
+            if not success:
+                st.error("❌ Failed to initialize AI backend. Please refresh the page.")
+                return
 
     # Render sidebar
     render_sidebar()

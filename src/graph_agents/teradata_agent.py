@@ -1,5 +1,4 @@
 from mcp_use import MCPClient
-from dotenv import load_dotenv
 from mcp_use.adapters import LangChainAdapter
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
@@ -13,9 +12,7 @@ from typing_extensions import override
 
 from graph_agents.base import GraphAgent
 from graph_agents.state import MultiAgentState
-from constants import MCP_CONFIG, TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH, ENV_PATH
-
-load_dotenv(ENV_PATH)
+from constants import MCP_CONFIG, TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH
 
 
 class TeradataAgent(GraphAgent):
@@ -23,7 +20,6 @@ class TeradataAgent(GraphAgent):
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
         self.mcp_config = MCP_CONFIG.copy()
-        self.mcp_config["mcpServers"]["teradata"]["env"]["DATABASE_URI"] = os.getenv("DATABASE_URI")
         with open(str(TERADATA_AGENT_SYSTEM_PROMPT_PATH), "r") as f:
             content = Template(f.read())
 
@@ -62,9 +58,8 @@ class TeradataAgent(GraphAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
-        user_query = state.get("user_query")
         explanation = state.get("explanation", None)
-        input_message = user_query + f"\n\nExplanation: {explanation}.\n" if explanation is not None else user_query
+        input_message = f"Manager Request:\n{explanation}"
 
         response = await self.agent_executor.ainvoke(
             {"input": input_message},

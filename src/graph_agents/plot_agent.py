@@ -52,9 +52,8 @@ class PlotAgent(GraphAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
-        user_query = state.get("user_query")
         explanation = state.get("explanation", None)
-        input_message = user_query + f"\n\nExplanation: {explanation}.\n" if explanation is not None else user_query
+        input_message = f"Manager Request: {explanation}"
 
         response = await self.agent_executor.ainvoke(
             {"input": input_message},

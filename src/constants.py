@@ -1,4 +1,7 @@
 from pathlib import Path
+from dotenv import load_dotenv
+
+import os
 
 BASE_DIR = Path(__file__).parents[1]
 
@@ -22,14 +25,22 @@ LANGGRAPH_GRPAH_IMAGE_PATH = ASSETS_PATH / "langgraph_graph.png"
 
 CHARTS_PATH = BASE_DIR / "charts"
 
+load_dotenv(ENV_PATH)
+
 MCP_CONFIG = {
     "mcpServers": {
         "teradata": {
             "command": "uvx",
             "args": ["teradata-mcp-server"],
             "env": {
-                "MCP_TRANSPORT": "stdio"
+                "TD_NAME": os.getenv("TD_NAME"),
+                "TD_HOST": os.getenv("TD_HOST"),
+                "TD_USER": os.getenv("TD_USER"),
+                "TD_PASSWORD": os.getenv("TD_PASSWORD"),
+                "TD_PORT": os.getenv("TD_PORT"),
+                "MCP_TRANSPORT": os.getenv("MCP_TRANSPORT"),
+                "DATABASE_URI": os.getenv("DATABASE_URI"),
             }
-        },
+        }
     }
 }

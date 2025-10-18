@@ -1,3 +1,4 @@
+import streamlit as st
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -67,6 +68,8 @@ class ManagerAgent(GraphAgent):
             explanation = response["explanation"]
         except:
             decision = result["output"].lower()
+            message = result["output"]
+            explanation = result["output"]
 
         if "teradata" in decision:
             state["manager_decision"] = "teradata"

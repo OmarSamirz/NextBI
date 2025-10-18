@@ -1,4 +1,3 @@
-from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.chat_history import InMemoryChatMessageHistory
 
@@ -8,7 +7,6 @@ from constants import ENV_PATH
 from agents.base import Agent, Message
 from modules.config import get_google_genai_config
 
-load_dotenv(ENV_PATH)
 
 
 class GeminiAgent(Agent):

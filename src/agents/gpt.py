@@ -1,14 +1,11 @@
-from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.chat_history import InMemoryChatMessageHistory
 
 from typing_extensions import override
 
-from constants import ENV_PATH
 from agents.base import Agent, Message
 from modules.config import get_openai_config
 
-load_dotenv(ENV_PATH)
 
 
 class GPTAgent(Agent):
