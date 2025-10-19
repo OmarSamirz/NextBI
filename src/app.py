@@ -148,6 +148,9 @@ async def generate_ai_reply() -> tuple[str, bool]:
         user_query = st.session_state["messages"][-1].get("content", "")
         state = await backend.run(user_query)
         reply_text, is_plot = state["response"], state["is_plot"]
+        sql_queries = state.get("sql_queries", None)
+        if sql_queries is not None:
+            reply_text +=  f"\n\nAll SQL Commands:\n{sql_queries}"
     logger.event("ai.call.end", chars=str(len(reply_text or "")))
     return reply_text, is_plot
 

@@ -7,6 +7,7 @@ import json
 from typing import Self
 from typing_extensions import override
 
+from modules.logger import logger
 from agents.base import BaseAgent
 from states.multi_agent_state import MultiAgentState
 from constants import MANAGER_AGENT_SYSTEM_PROMPT_PATH
@@ -46,6 +47,7 @@ class ManagerAgent(BaseAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        logger.log("[Agent]", "manager")
         user_query = f"User Query:\n{state['user_query']}"
         td_agent_response = state.get("td_agent_response", None)
         plot_agent_response = state.get("plot_agent_response", None)
@@ -55,13 +57,13 @@ class ManagerAgent(BaseAgent):
         if plot_agent_response is not None:
             user_query += f"\n\nPlot Agent Response:\n{plot_agent_response}"
 
-        result = await self.agent_executor.ainvoke(
+        response = await self.agent_executor.ainvoke(
             {"input": user_query},
         )
 
         decision, message, explanation = None, None, None
         try:
-            response = result["output"]
+            response = response["output"]
             response = response.replace("```json", "")
             response = response.replace("}\n```", "")
             response = response.replace("}```", "")
@@ -70,9 +72,9 @@ class ManagerAgent(BaseAgent):
             message = response["message"]
             explanation = response["explanation"]
         except:
-            decision = result["output"].lower()
-            message = result["output"]
-            explanation = result["output"]
+            decision = response["output"].lower()
+            message = response["output"]
+            explanation = response["output"]
 
         if "teradata" in decision:
             state["manager_decision"] = "teradata"
@@ -83,9 +85,12 @@ class ManagerAgent(BaseAgent):
         else:
             state["manager_decision"] = "done"
 
-        state["response"] = message if message is not None else result["output"]
+        state["response"] = message if message is not None else response["output"]
         state["explanation"] = explanation if explanation is not None else None
-
         state["messages"].append({"role": "manager", "content": state["response"]})
+
+        logger.log("[Manager Decision]", decision)
+        logger.log(f"[Manager Explanation]", explanation)
+        logger.log("[Manager Agent Output]", str(response))
 
         return state

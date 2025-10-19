@@ -9,6 +9,7 @@ from typing import Self
 from string import Template
 from typing_extensions import override
 
+from modules.logger import logger
 from agents.base import BaseAgent
 from states.multi_agent_state import MultiAgentState
 from constants import CHARTS_PATH, PLOT_AGENT_SYSTEM_PROMPT_PATH
@@ -52,6 +53,7 @@ class PlotAgent(BaseAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        logger.log("[Agent]", "plot")
         explanation = state.get("explanation", None)
         input_message = f"Manager Request: {explanation}"
 
@@ -60,5 +62,7 @@ class PlotAgent(BaseAgent):
         )
         state["is_plot"] = True
         state["plot_agent_response"] = response["output"]
+
+        logger.log("[Plot Agent Output]", response["output"])
 
         return state

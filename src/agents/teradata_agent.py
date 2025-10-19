@@ -6,10 +6,13 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 
 import os
-from typing import Self
+import json
+import textwrap
 from string import Template
+from typing import Self, Union
 from typing_extensions import override
 
+from modules.logger import logger
 from agents.base import BaseAgent
 from states.multi_agent_state import MultiAgentState
 from constants import MCP_CONFIG, TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH
@@ -55,9 +58,43 @@ class TeradataAgent(BaseAgent):
         )
 
         return self
+    
+    def _process_intermediate_logs(self, response) -> Union[str, None]:
+        tools_used = []
+        found_sql = False
+        sql_message = ["\n\n**SQL Commands Used:**\n"]
+
+        intermediate_steps = response.get("intermediate_steps", [])
+        intermediate_steps_len = len(intermediate_steps)
+        for i, (action, observation) in enumerate(intermediate_steps, start=1):
+            logger.log(f"[Step {i}/{intermediate_steps_len}]", "")
+            tools_used.append(action.tool)
+
+            try:
+                obs_json = json.loads(observation) if observation else {}
+            except (json.JSONDecodeError, TypeError):
+                obs_json = {}
+
+            status = obs_json.get("status")
+            if status:
+                logger.log("[MCP Status]", status)
+                if status == "success":
+                    results = obs_json.get("results")
+                    logger.log("[MCP Results]", str(results))
+                    sql_query = obs_json.get("metadata", {}).get("sql")
+                    if sql_query:
+                        found_sql = True
+                        logger.log("[MCP SQL Query]", sql_query)
+                        wrapped_sql = textwrap.fill(sql_query, width=100)
+                        sql_message.append(f"\n```sql\n{wrapped_sql}\n```\n")
+
+        final_sql_messages = "\n".join(sql_message) if found_sql else None
+
+        return final_sql_messages
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        logger.log("[Agent]", "teradata")
         explanation = state.get("explanation", None)
         input_message = f"Manager Request:\n{explanation}"
 
@@ -66,5 +103,9 @@ class TeradataAgent(BaseAgent):
         )
 
         state["td_agent_response"] = response["output"]
+        sql_messages = self._process_intermediate_logs(response)
+        state["sql_queries"] = sql_messages
+        
+        logger.log("[Teradata Agent Output]", response["output"])
 
         return state
