@@ -1,14 +1,19 @@
 from langgraph.graph import StateGraph, END
 from langchain.memory.chat_memory import BaseChatMemory
 
-from graph_agents.plot_agent import PlotAgent
-from graph_agents.state import MultiAgentState
-from graph_agents.manager_agent import ManagerAgent
-from graph_agents.teradata_agent import TeradataAgent
+from typing import override
+
+from states import MultiAgentState
+from multi_agents.base import BaseMultiAgent
 from constants import LANGGRAPH_GRPAH_IMAGE_PATH
+from agents import (
+    PlotAgent,
+    ManagerAgent,
+    TeradataAgent
+)
 
 
-class MultiAgent:
+class MultiAgent(BaseMultiAgent):
 
     def __init__(
         self,
@@ -17,6 +22,7 @@ class MultiAgent:
         plot_agent: PlotAgent,
         teradata_agent: TeradataAgent,
     ) -> None:
+        super().__init__()
         self.memory = memory
         self.manager_agent = manager_agent
         self.plot_agent = plot_agent
@@ -38,6 +44,7 @@ class MultiAgent:
         else:
             return END
 
+    @override
     def _build_graph(self) -> None:
         self.graph.add_node("manager", self.manager_agent)
         self.graph.add_node("teradata", self.teradata_agent)
@@ -57,7 +64,10 @@ class MultiAgent:
         self.graph.add_edge("plot", "manager")
         self.graph.set_entry_point("manager")
 
+    @override
     async def run(self, user_query: str) -> MultiAgentState:
+        if not isinstance(user_query, str):
+            raise ValueError(f"User query must be a string.")
         
         state = MultiAgentState(
             is_plot=False,
@@ -68,8 +78,8 @@ class MultiAgent:
         final_state = await self.app.ainvoke(state)
 
         return final_state
-
-
-    def visualize(self) -> None:
+    
+    @override
+    def visualize(self):
         with open(LANGGRAPH_GRPAH_IMAGE_PATH, "wb") as f:
             f.write(self.app.get_graph().draw_mermaid_png())

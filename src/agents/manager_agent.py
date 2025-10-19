@@ -7,13 +7,12 @@ import json
 from typing import Self
 from typing_extensions import override
 
-from graph_agents.base import GraphAgent
-from graph_agents.state import MultiAgentState
+from agents.base import BaseAgent
+from states.multi_agent_state import MultiAgentState
 from constants import MANAGER_AGENT_SYSTEM_PROMPT_PATH
-from internal_tools import current_datetime, current_dollar_pound_exchange_rate
 
 
-class ManagerAgent(GraphAgent):
+class ManagerAgent(BaseAgent):
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
@@ -55,14 +54,18 @@ class ManagerAgent(GraphAgent):
             user_query += f"\n\nTeradata Agent Response:\n{td_agent_response}"
         if plot_agent_response is not None:
             user_query += f"\n\nPlot Agent Response:\n{plot_agent_response}"
-        
+
         result = await self.agent_executor.ainvoke(
             {"input": user_query},
         )
 
         decision, message, explanation = None, None, None
         try:
-            response = json.loads(result["output"])
+            response = result["output"]
+            response = response.replace("```json", "")
+            response = response.replace("}\n```", "")
+            response = response.replace("}```", "")
+            response = json.loads(response)
             decision = response["decision"].lower()
             message = response["message"]
             explanation = response["explanation"]

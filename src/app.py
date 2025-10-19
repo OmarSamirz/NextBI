@@ -8,7 +8,7 @@ from typing import List
 
 from modules.logger import logger
 from utils import get_multi_agent
-from agents.base import Message, Agent
+from agents.base import Message
 from constants import TERADATA_LOGO_PATH, CHARTS_PATH
 from modules.event_loop_thread import EventLoopThread
 
@@ -89,13 +89,13 @@ def render_sidebar() -> None:
 
         st.markdown(
             (
-                "<div class=\"sidebar-desc\" style=\"color:#888;\">"
-                    "<p>"
-                    "Select AI 2.0 is an AI for BI assistant that replaces dashboards, "
-                    "letting executives and business users ask questions in plain English and get instant answers from enterprise data, "
-                    "seamlessly connected to Vantage via TD MCP server."
-                    "</p>"
-                "</div>"
+            "<div class=\"sidebar-desc\" style=\"color:#888;\">"
+                "<p>"
+                "Select AI 2.0 is an AI assistant for BI that replaces dashboards,"
+                "letting executives and business users ask questions in plain English and get instant answers from enterprise data,"
+                "seamlessly connected to Vantage via TD MCP server."
+                "</p>"
+            "</div>"
             ),
             unsafe_allow_html=True,
         )
@@ -118,7 +118,7 @@ def render_chat(messages: List[Message]) -> None:
         chat_role = "user" if role == "user" else "assistant"
         
         with st.chat_message(chat_role):
-            st.markdown(content)
+            st.markdown(content.replace("\n", "<br>"), unsafe_allow_html=True)
             
             # If this AI message has an associated chart, display it
             if role == "ai" and "chart" in msg:
@@ -136,7 +136,7 @@ async def generate_ai_reply() -> tuple[str, bool]:
     tuple[str, bool]
         (reply_text, is_plot)
     """
-    backend: Agent = st.session_state.get("ai_instance")
+    backend = st.session_state.get("ai_instance")
 
     if backend is None:
         raise RuntimeError("AI backend not initialized")
@@ -158,14 +158,6 @@ def handle_user_input(prompt: str) -> None:
     if not text:
         return
 
-    # # Lazy initialization: Initialize AI backend on first message
-    # if st.session_state.get("ai_instance") is None:
-    #     with st.spinner("🔄 Initializing AI backend for the first time..."):
-    #         success = initialize_ai_backend()
-    #         if not success:
-    #             st.error("Failed to initialize AI backend. Please refresh the page and try again.")
-    #             return
-
     # Add user message
     user_msg = {
         "role": "user",
@@ -183,7 +175,7 @@ def handle_user_input(prompt: str) -> None:
         return
 
     chart_image = None
-    
+
     try:
         with st.spinner("Thinking..."):
             reply, is_plot = loop_thread.run_coroutine(generate_ai_reply())
@@ -243,16 +235,16 @@ def handle_user_input(prompt: str) -> None:
 # MAIN APP
 # -------------------------------------------------------------------------
 def main():
-    st.set_page_config(page_title="Select AI 2.0", page_icon="💬", layout="wide")
+    st.set_page_config(page_title="Select AI 2.0", page_icon="💬", layout="wide", )
     
     # Initialize basic session state (lightweight)
     init_session_state()
 
     if not st.session_state.get("init_attempted", False):
-        with st.spinner("⚙️ Initializing AI backend..."):
+        with st.spinner("Initializing AI backend..."):
             success = initialize_ai_backend()
             if not success:
-                st.error("❌ Failed to initialize AI backend. Please refresh the page.")
+                st.error("Failed to initialize AI backend. Please refresh the page.")
                 return
 
     # Render sidebar
@@ -263,7 +255,7 @@ def main():
 
     # Show welcome message if no messages yet
     if len(st.session_state["messages"]) == 0:
-        st.info("👋 Welcome to Select AI 2.0! Ask me anything about your enterprise data.")
+        st.info("Welcome to Select AI 2.0! Ask me anything about your enterprise data.")
 
     # Chat input (always visible)
     prompt = st.chat_input("Type a message and press Enter")

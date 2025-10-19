@@ -2,38 +2,14 @@ from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.memory import ConversationBufferWindowMemory
 
-from agents.base import Agent
-from agents import GPTAgent, GeminiAgent
-from graph_agents.plot_agent import PlotAgent
-from graph_agents.multi_agent import MultiAgent
-from graph_agents.manager_agent import ManagerAgent
-from graph_agents.teradata_agent import TeradataAgent
+from multi_agents import MultiAgent
+from agents import TeradataAgent, ManagerAgent, PlotAgent
 from modules.config import get_ai_backend, get_openai_config, get_google_genai_config
 
-async def get_ai() -> Agent:
-    """Construct and return a concrete :class:`AI` backend based on ``AI_BACKEND``.
-
-    Currently supported values:
-    - "gpt": :class:`ai.gpt.AI_GPT`
-    - "openai": :class:`ai.openai.AI_OpenAI`
-
-    Returns
-    -------
-    AI
-        A ready-to-use backend implementing :class:`AI`.
-    """
-    backend = get_ai_backend()
-    
-    if backend == "gpt":
-        return await GPTAgent.create()
-    if backend == "gemini":
-        return await GeminiAgent.create()
-
-    raise ValueError(f"Unknown AI backend: {backend}")
 
 async def get_multi_agent() -> MultiAgent:
     backend = get_ai_backend()
-    
+
     llm = None
     if backend == "gpt":
         cfg = get_openai_config()
