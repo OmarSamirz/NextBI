@@ -16,6 +16,12 @@ NextBI is a Streamlit-based AI assistant for business intelligence that lets bus
 - Integration test runner: `tests/run_mcp_tests.py`
 - Dependencies: `requirements.txt`
 
+## Architecture diagram
+
+Below is a flow diagram showing how user input is processed end-to-end.
+
+![Dashboard](assets/langgraph_graph.png)
+
 ## Getting started
 
 These instructions assume you have a working Conda installation on Windows (PowerShell). Adjust commands for other platforms or shells.
@@ -38,6 +44,24 @@ pip install -r requirements.txt
 
 - `OPENAI_API_KEY` (or other model provider keys) — if you intend to use OpenAI-based backends.
 - Optional MCP-related env vars used by helper scripts: `MCP_TRANSPORT`, `MCP_HOST`, `MCP_PORT`
+
+Additionally, the project can use discrete Teradata connection variables instead of a single `DATABASE_URI`. The following TD_* variables are recognized by test scripts and some helper tools. If you prefer, set `DATABASE_URI` directly instead.
+
+- `TD_HOST`  Hostname or IP address for the Teradata server (example: `mcp-db.example.com`).
+- `TD_NAME`  Database name/schema to connect to (example: `BANK_DB`).
+- `TD_USER`  Username for Teradata authentication (example: `mcp_user`).
+- `TD_PASSWORD`  Password for Teradata authentication (do NOT commit this value).
+
+Example `.env` entries (avoid committing this file):
+
+```text
+TD_HOST=mcp-db.example.com
+TD_NAME=BANK_DB
+TD_USER=mcp_user
+TD_PASSWORD=supersecurepassword
+# or use a convenience URI instead:
+DATABASE_URI=teradata://mcp_user:supersecurepassword@mcp-db.example.com:1025/BANK_DB
+```
 
 Create a `config/.env` file if you prefer storing local environment settings; `scripts/start_mcp_server.py` attempts to load `config/.env` automatically.
 
@@ -108,12 +132,6 @@ This project uses a small multi-agent architecture. Each agent has a focused res
 
 - Missing `DATABASE_URI` or MCP connectivity: `scripts/start_mcp_server.py` and test runners validate environment and exit with helpful errors.
 - Plot file cleanup: the Streamlit app attempts to load the newest image from `charts/` and will try to delete temporary files after loading.
-
-## Architecture diagram
-
-Below is a simple flow diagram showing how user input is processed end-to-end.
-
-![Dashboard](assets/langgraph_graph.png)
 
 ## Troubleshooting & Where to get help
 
