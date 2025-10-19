@@ -40,7 +40,7 @@ pip install -r requirements.txt
 
 - `TD_HOST` — Hostname or IP address for the Teradata server (example: `mcp-db.example.com`).
 - `TD_NAME` — Database name/schema to connect to (example: `BANK_DB`).
-- `TD_USER` — Username for Teradata authentication (example: `mcp_user`).
+- `TD_USER` — Username for Teradata authentication (example: `demo_user`).
 - `TD_PASSWORD` — Password for Teradata authentication (do NOT commit this value).
 - `DATABASE_URI` — Teradata connection string (required by MCP server and tests). Example:
 
