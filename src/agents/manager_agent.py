@@ -7,9 +7,9 @@ import json
 from typing import Self
 from typing_extensions import override
 
+from agents import BaseAgent
 from modules.logger import logger
-from agents.base import BaseAgent
-from states.multi_agent_state import MultiAgentState
+from states import MultiAgentState
 from constants import MANAGER_AGENT_SYSTEM_PROMPT_PATH
 
 

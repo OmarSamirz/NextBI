@@ -8,7 +8,7 @@ from typing import List
 
 from modules.logger import logger
 from utils import get_multi_agent
-from agents.base import Message
+from agents.base_agent import Message
 from constants import TERADATA_LOGO_PATH, CHARTS_PATH
 from modules.event_loop_thread import EventLoopThread
 
@@ -39,7 +39,7 @@ def init_session_state() -> None:
 
     # Initialize event loop (lightweight operation)
     get_or_create_event_loop()
-    
+
     # Flag to track if we've attempted initialization
     if "init_attempted" not in st.session_state:
         st.session_state["init_attempted"] = False
@@ -54,7 +54,7 @@ def initialize_ai_backend() -> bool:
         loop = st.session_state["event_loop"]
         ai_impl = loop.run_coroutine(get_multi_agent())
         st.session_state["ai_instance"] = ai_impl
-        
+
         # Warmup: optional
         warmup_func = getattr(ai_impl, "warmup", None)
         if warmup_func and asyncio.iscoroutinefunction(warmup_func):
@@ -62,12 +62,12 @@ def initialize_ai_backend() -> bool:
             loop.run_coroutine(warmup_func())
         elif warmup_func:
             warmup_func()
-        
+
         logger.event("ai.init", backend=ai_impl.__class__.__name__)
         # logger.event("ai.type", model=ai_impl.model)
         st.session_state["init_attempted"] = True
         return True
-        
+
     except Exception as e:
         logger.event("ai.init.error", error=str(e))
         st.session_state["ai_instance"] = None
@@ -106,23 +106,31 @@ def render_sidebar() -> None:
 # -------------------------------------------------------------------------
 def render_chat(messages: List[Message]) -> None:
     """Render chat messages in Streamlit UI."""
-    import re
 
-    def _normalize(text: str) -> str:
-        s = text.replace("\r\n", "\n").replace("\r", "\n").strip()
-        return re.sub(r"\n{3,}", "\n\n", s)
+    # def _normalize(text: str) -> str:
+    #     return text.replace("\r\n", "\n").replace("\r", "\n").strip()
 
     for msg in messages:
         role = msg.get("role", "ai")
-        content = _normalize(msg.get("content", ""))
+        # content = _normalize(msg.get("content", ""))
+        content = msg.get("content", "")
         chat_role = "user" if role == "user" else "assistant"
-        
+
         with st.chat_message(chat_role):
-            st.markdown(content.replace("\n", "<br>"), unsafe_allow_html=True)
-            
+            if "**SQL Commands:**" in content:
+                splitted_text = content.split("**SQL Commands:**")
+                message = splitted_text[0]
+                sql = splitted_text[1]
+                message = message.replace(" ", "&nbsp;").replace("\n", "  \n")
+                content = "**SQL Commands:**".join([message, sql])
+            else:
+                content = content.replace(" ", "&nbsp;").replace("\n", "  \n")
+
+            st.markdown(content)
+
             # If this AI message has an associated chart, display it
             if role == "ai" and "chart" in msg:
-                st.image(msg["chart"], width=650)
+                st.image(msg["chart"], width=550)
 
 
 # -------------------------------------------------------------------------
@@ -148,7 +156,7 @@ async def generate_ai_reply() -> tuple[str, bool]:
     is_plot = state.get("is_plot", False)
     sql_queries = state.get("sql_queries", None)
     if sql_queries is not None:
-        reply_text +=  f"\n\nAll SQL Commands:\n{sql_queries}"
+        reply_text +=  sql_queries
 
     logger.event("ai.call.end", chars=str(len(reply_text or "")))
     return reply_text, is_plot
@@ -169,6 +177,10 @@ def handle_user_input(prompt: str) -> None:
     st.session_state["messages"].append(user_msg)
     logger.log(user_msg["role"], user_msg["content"])
 
+    # Immediately render the user message (so it stays visible)
+    with st.chat_message("user"):
+        st.markdown(text)
+
     loop_thread = st.session_state.get("event_loop")
     ai_backend = st.session_state.get("ai_instance")
 
@@ -179,31 +191,33 @@ def handle_user_input(prompt: str) -> None:
     chart_image = None
 
     try:
-        with st.spinner("Thinking..."):
-            reply, is_plot = loop_thread.run_coroutine(generate_ai_reply())
+        # Display the spinner *under* the user’s message
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                reply, is_plot = loop_thread.run_coroutine(generate_ai_reply())
 
-            # Handle chart generation
-            if is_plot:
-                try:
-                    charts = os.listdir(CHARTS_PATH)
-                    if charts:
-                        # Get the most recently created chart
-                        chart_files = [os.path.join(str(CHARTS_PATH), f) for f in charts]
-                        chart_path = max(chart_files, key=os.path.getctime)
+                # Handle chart generation
+                if is_plot:
+                    try:
+                        charts = os.listdir(CHARTS_PATH)
+                        if charts:
+                            # Get the most recently created chart
+                            chart_files = [os.path.join(str(CHARTS_PATH), f) for f in charts]
+                            chart_path = max(chart_files, key=os.path.getctime)
 
-                        # Load the image using PIL
-                        with Image.open(chart_path) as img:
-                            chart_image = img.copy()
+                            # Load the image using PIL
+                            with Image.open(chart_path) as img:
+                                chart_image = img.copy()
 
-                        # Optionally clean up the file after loading
-                        try:
-                            os.remove(chart_path)
-                        except Exception as cleanup_error:
-                            print(f"Warning: Could not delete chart file: {cleanup_error}")
+                            # Optionally clean up the file after loading
+                            try:
+                                os.remove(chart_path)
+                            except Exception as cleanup_error:
+                                print(f"Warning: Could not delete chart file: {cleanup_error}")
 
-                except Exception as chart_error:
-                    print(f"Error loading chart: {chart_error}")
-                    st.warning(f"Could not load chart: {chart_error}")
+                    except Exception as chart_error:
+                        print(f"Error loading chart: {chart_error}")
+                        st.warning(f"Could not load chart: {chart_error}")
 
     except Exception as e:
         st.error(f"Couldn't get a reply: {e}")
@@ -223,6 +237,11 @@ def handle_user_input(prompt: str) -> None:
         if chart_image is not None:
             ai_msg["chart"] = chart_image
 
+        # Display AI reply immediately
+        st.markdown(ai_msg["content"])
+        if chart_image is not None:
+            st.image(chart_image, width=550)
+
     st.session_state["messages"].append(ai_msg)
     logger.log(ai_msg["role"], ai_msg["content"])
 
@@ -230,6 +249,7 @@ def handle_user_input(prompt: str) -> None:
     if len(st.session_state["messages"]) > MAX_MESSAGES:
         st.session_state["messages"] = st.session_state["messages"][-MAX_MESSAGES:]
 
+    # Optional: rerun only if needed to refresh full chat view
     st.rerun()
 
 

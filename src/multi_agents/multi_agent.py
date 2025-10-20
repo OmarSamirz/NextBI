@@ -4,7 +4,7 @@ from langchain.memory.chat_memory import BaseChatMemory
 from typing import override
 
 from states import MultiAgentState
-from multi_agents.base import BaseMultiAgent
+from multi_agents import BaseMultiAgent
 from constants import LANGGRAPH_GRPAH_IMAGE_PATH
 from agents import (
     PlotAgent,

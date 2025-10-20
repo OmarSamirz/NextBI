@@ -6,15 +6,16 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 
 import os
+import re
 import json
 import textwrap
 from string import Template
 from typing import Self, Union
 from typing_extensions import override
 
+from agents import BaseAgent
 from modules.logger import logger
-from agents.base import BaseAgent
-from states.multi_agent_state import MultiAgentState
+from states import MultiAgentState
 from constants import MCP_CONFIG, TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH
 
 
@@ -58,16 +59,21 @@ class TeradataAgent(BaseAgent):
         )
 
         return self
-    
+
     def _process_intermediate_logs(self, response) -> Union[str, None]:
         found_sql = False
-        sql_message = ["\n\n**SQL Commands Used:**\n"]
+        sql_message = ["\n\n**SQL Commands:**\n"]
 
         intermediate_steps = response.get("intermediate_steps", [])
         intermediate_steps_len = len(intermediate_steps)
         for i, (action, observation) in enumerate(intermediate_steps, start=1):
             logger.log(f"[Step {i}/{intermediate_steps_len}]", "")
             logger.log("[Used Tool]", action.tool)
+
+            if not isinstance(observation, list):
+                match = re.search(r"text='(.*)'", observation)
+                if match:
+                    observation = match.group(1).encode("utf-8").decode("unicode_escape")
 
             try:
                 obs_json = json.loads(observation) if observation else {}

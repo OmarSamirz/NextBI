@@ -1,6 +1,6 @@
 from typing import Optional
 
-from states.base import BaseState
+from states import BaseState
 
 
 class MultiAgentState(BaseState):

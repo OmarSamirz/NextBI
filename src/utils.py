@@ -1,11 +1,122 @@
+from pathlib import Path
+from dotenv import dotenv_values
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.memory import ConversationBufferWindowMemory
 
+import os
+from typing import Optional
+
+from modules.config import Config
 from multi_agents import MultiAgent
 from agents import TeradataAgent, ManagerAgent, PlotAgent
-from modules.config import get_ai_backend, get_openai_config, get_google_genai_config
 
+def get_openai_config(base_dir: Optional[Path] = None) -> dict:
+    """Load OpenAI settings from ``config/.env`` and return a ready client + settings.
+
+    Returns
+    -------
+    dict
+        Mapping with keys ``{"api_key", "model", "client"}``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``config/.env`` is missing.
+    RuntimeError
+        If the required ``OPENAI_API_KEY`` is not set.
+    """
+    # Ensure .env is loaded and exists (reuses Config side-effect to load)
+    Config.load(base_dir=base_dir)
+
+    # Import locally to avoid hard dependency for non-OpenAI flows
+    from openai import OpenAI  # type: ignore
+
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set in environment or config/.env")
+
+    model = os.getenv("GPT_MODEL", "gpt-4o").strip() or "gpt-4o"
+
+    # Optional timeout to avoid hanging calls
+    try:
+        timeout = int(os.getenv("OPENAI_TIMEOUT", "20").strip())
+    except ValueError:
+        timeout = 20
+
+    # Optional advanced settings
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
+    organization = os.getenv("OPENAI_ORG", "").strip() or None
+    project = os.getenv("OPENAI_PROJECT", "").strip() or None
+
+    client_kwargs = {"api_key": api_key, "timeout": timeout}
+    if base_url:
+        client_kwargs["base_url"] = base_url
+    if organization:
+        client_kwargs["organization"] = organization
+    if project:
+        client_kwargs["project"] = project
+
+    client = OpenAI(**client_kwargs)
+    return {"api_key": api_key, "model": model, "client": client}
+
+def get_google_genai_config(base_dir: Optional[Path] = None) -> dict:
+    """Load OpenAI settings from ``config/.env`` and return a ready client + settings.
+
+    Returns
+    -------
+    dict
+        Mapping with keys ``{"api_key", "model", "client"}``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``config/.env`` is missing.
+    RuntimeError
+        If the required ``GOOGLE_API_KEY`` is not set.
+    """
+    # Ensure .env is loaded and exists (reuses Config side-effect to load)
+    Config.load(base_dir=base_dir)
+
+    # Import locally to avoid hard dependency for non-OpenAI flows
+    from openai import OpenAI  # type: ignore
+
+    api_key = os.getenv("GOOGLE_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set in environment or config/.env")
+
+    model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+
+    # Optional timeout to avoid hanging calls
+    try:
+        timeout = int(os.getenv("GOOGLE_TIMEOUT", "20").strip())
+    except ValueError:
+        timeout = 20
+
+    client_kwargs = {"api_key": api_key, "timeout": timeout}
+
+    client = OpenAI(**client_kwargs)
+    return {"api_key": api_key, "model": model, "client": client}
+
+def get_ai_backend(base_dir: Optional[Path] = None) -> str:
+    """Return AI_BACKEND (defaults to 'gpt').
+
+    Precedence rules:
+    - If ``base_dir`` is provided: read only from that ``config/.env`` file and ignore process env.
+      This isolates tests and ad-hoc checks from global settings.
+    - If ``base_dir`` is None: use the process environment and default to "gpt".
+    """
+    if base_dir is not None:
+        env_path = base_dir / "config" / ".env"
+        if not env_path.exists():
+            raise FileNotFoundError(f"Config file not found: {env_path}")
+        values = dotenv_values(dotenv_path=env_path)
+        val = (values.get("AI_BACKEND", "") or "").strip().lower()
+        return val or "gpt"
+
+    # Default behavior: consult the current process environment only.
+    # Other components (e.g., logger, OpenAI config) will load .env as needed.
+    return os.getenv("AI_BACKEND", "gpt").strip().lower() or "gpt"
 
 async def get_multi_agent() -> MultiAgent:
     backend = get_ai_backend()

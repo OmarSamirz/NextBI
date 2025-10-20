@@ -1,7 +1,7 @@
 
 from abc import ABC, abstractmethod
 
-from states.base import BaseState
+from states import BaseState
 
 
 class BaseMultiAgent(ABC):
