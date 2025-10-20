@@ -4,7 +4,6 @@ from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_experimental.tools.python.tool import PythonAstREPLTool
 
-
 from typing import Self
 from string import Template
 from typing_extensions import override
@@ -38,7 +37,7 @@ class PlotAgent(BaseAgent):
     async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
         self = cls(llm, memory)
         self.tools = [PythonAstREPLTool()]
-        
+
         agent = create_tool_calling_agent(llm=llm, tools=self.tools, prompt=self.prompt)
         self.agent_executor = AgentExecutor(
             agent=agent,
@@ -60,9 +59,12 @@ class PlotAgent(BaseAgent):
         response = await self.agent_executor.ainvoke(
             {"input": input_message},
         )
-        state["is_plot"] = True
-        state["plot_agent_response"] = response["output"]
+        if "intermediate_steps" in response and len(response["intermediate_steps"]) > 0:
+            action, _ = response["intermediate_steps"][0]
+            logger.log("[Used Tool]", action.tool)
+            state["is_plot"] = True
 
+        state["plot_agent_response"] = response["output"]
         logger.log("[Plot Agent Output]", response["output"])
 
         return state

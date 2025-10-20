@@ -60,7 +60,6 @@ class TeradataAgent(BaseAgent):
         return self
     
     def _process_intermediate_logs(self, response) -> Union[str, None]:
-        tools_used = []
         found_sql = False
         sql_message = ["\n\n**SQL Commands Used:**\n"]
 
@@ -68,7 +67,7 @@ class TeradataAgent(BaseAgent):
         intermediate_steps_len = len(intermediate_steps)
         for i, (action, observation) in enumerate(intermediate_steps, start=1):
             logger.log(f"[Step {i}/{intermediate_steps_len}]", "")
-            tools_used.append(action.tool)
+            logger.log("[Used Tool]", action.tool)
 
             try:
                 obs_json = json.loads(observation) if observation else {}
@@ -98,14 +97,19 @@ class TeradataAgent(BaseAgent):
         explanation = state.get("explanation", None)
         input_message = f"Manager Request:\n{explanation}"
 
-        response = await self.agent_executor.ainvoke(
-            {"input": input_message},
-        )
+        try:
+            response = await self.agent_executor.ainvoke(
+                {"input": input_message},
+            )
+        except ValueError as e:
+            logger.log("[Error]", f"{e}")
+            state["td_agent_response"] = e
+            return state
 
         state["td_agent_response"] = response["output"]
         sql_messages = self._process_intermediate_logs(response)
         state["sql_queries"] = sql_messages
-        
+
         logger.log("[Teradata Agent Output]", response["output"])
 
         return state

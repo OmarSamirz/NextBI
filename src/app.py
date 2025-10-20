@@ -142,15 +142,14 @@ async def generate_ai_reply() -> tuple[str, bool]:
         raise RuntimeError("AI backend not initialized")
 
     logger.event("ai.call.start", count=str(len(st.session_state["messages"])))
-    if hasattr(backend, "generate_reply"):
-        reply_text, is_plot = await backend.generate_reply(st.session_state["messages"])
-    if hasattr(backend, "run"):
-        user_query = st.session_state["messages"][-1].get("content", "")
-        state = await backend.run(user_query)
-        reply_text, is_plot = state["response"], state["is_plot"]
-        sql_queries = state.get("sql_queries", None)
-        if sql_queries is not None:
-            reply_text +=  f"\n\nAll SQL Commands:\n{sql_queries}"
+    user_query = st.session_state["messages"][-1].get("content", "")
+    state = await backend.run(user_query)
+    reply_text = state["response"]
+    is_plot = state.get("is_plot", False)
+    sql_queries = state.get("sql_queries", None)
+    if sql_queries is not None:
+        reply_text +=  f"\n\nAll SQL Commands:\n{sql_queries}"
+
     logger.event("ai.call.end", chars=str(len(reply_text or "")))
     return reply_text, is_plot
 
