@@ -1,3 +1,12 @@
+"""Plot agent implementation.
+
+The PlotAgent is responsible for generating visualizations. It uses a
+Python AST REPL tool to execute plotting code in a sandboxed manner and
+writes resulting images to the configured charts path. When the agent
+executes a plotting tool it sets ``state['is_plot'] = True`` so the UI
+can load the generated image.
+"""
+
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -15,6 +24,12 @@ from constants import CHARTS_PATH, PLOT_AGENT_SYSTEM_PROMPT_PATH
 
 
 class PlotAgent(BaseAgent):
+    """Agent responsible for generating charts and visualization artifacts.
+
+    The system prompt is templated with the ``CHARTS_PATH`` so the LLM can
+    reference where to write images. The agent exposes the usual
+    asynchronous ``create`` factory and a callable ``__call__``.
+    """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
@@ -35,6 +50,20 @@ class PlotAgent(BaseAgent):
     @override
     @classmethod
     async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
+        """Create a PlotAgent and prepare the Python execution tool.
+
+        Parameters
+        ----------
+        llm:
+            LangChain language model used by this agent.
+        memory:
+            Shared conversation memory.
+
+        Returns
+        -------
+        PlotAgent
+            Initialized PlotAgent with Python execution tool available.
+        """
         self = cls(llm, memory)
         self.tools = [PythonAstREPLTool()]
 
@@ -52,6 +81,19 @@ class PlotAgent(BaseAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        """Invoke the plotting agent and update state with results.
+
+        Parameters
+        ----------
+        state:
+            Current MultiAgentState containing manager explanation.
+
+        Returns
+        -------
+        MultiAgentState
+            Updated state with ``is_plot`` possibly set to True and
+            ``plot_agent_response`` populated with agent output.
+        """
         logger.log("[Agent]", "plot")
         explanation = state.get("explanation", None)
         input_message = f"Manager Request: {explanation}"

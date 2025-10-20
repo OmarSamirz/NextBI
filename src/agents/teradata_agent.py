@@ -1,3 +1,11 @@
+"""Teradata agent implementation.
+
+This agent is responsible for interacting with the Teradata MCP server
+via the `mcp_use` client and the LangChainAdapter. It detects SQL
+queries produced as intermediate tool outputs and collects them into
+``state['sql_queries']`` for display in the UI.
+"""
+
 from mcp_use import MCPClient
 from mcp_use.adapters import LangChainAdapter
 from langchain.base_language import BaseLanguageModel
@@ -20,6 +28,14 @@ from constants import MCP_CONFIG, TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH
 
 
 class TeradataAgent(BaseAgent):
+    """Agent that executes queries against Teradata via MCP.
+
+    The TeradataAgent configures an MCP client and creates LangChain
+    tools from it using ``LangChainAdapter``. When the agent runs it
+    inspects intermediate tool outputs (MCP observations) and, if SQL
+    is present, formats and returns it attached to the multi-agent
+    state so it can be shown in the UI.
+    """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
@@ -45,6 +61,20 @@ class TeradataAgent(BaseAgent):
     @override
     @classmethod
     async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
+        """Create the TeradataAgent and prepare MCP-backed tools.
+
+        Parameters
+        ----------
+        llm:
+            LangChain language model used by this agent.
+        memory:
+            Shared conversation memory.
+
+        Returns
+        -------
+        TeradataAgent
+            A fully configured teradata agent ready to call MCP tools.
+        """
         self = cls(llm, memory)
         self.tools = await self.adapter.create_tools(self.client)
 
@@ -61,6 +91,19 @@ class TeradataAgent(BaseAgent):
         return self
 
     def _process_intermediate_logs(self, response) -> Union[str, None]:
+        """Extract SQL statements from MCP intermediate tool outputs.
+
+        Parameters
+        ----------
+        response:
+            The raw agent response dictionary returned by the agent executor.
+
+        Returns
+        -------
+        Optional[str]
+            Markdown-formatted SQL block when SQL queries are detected;
+            otherwise None.
+        """
         found_sql = False
         sql_message = ["\n\n**SQL Commands:**\n"]
 
@@ -99,6 +142,24 @@ class TeradataAgent(BaseAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        """Invoke the Teradata agent and attach responses and SQL to state.
+
+        Parameters
+        ----------
+        state:
+            The current MultiAgentState containing the manager explanation.
+
+        Returns
+        -------
+        MultiAgentState
+            Updated state containing ``td_agent_response`` and optionally
+            ``sql_queries`` when SQL was produced.
+
+        Notes
+        -----
+        If an exception occurs during execution the exception is stored
+        in ``state['td_agent_response']`` and the state is returned.
+        """
         logger.log("[Agent]", "teradata")
         explanation = state.get("explanation", None)
         input_message = f"Manager Request:\n{explanation}"

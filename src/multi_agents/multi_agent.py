@@ -1,3 +1,11 @@
+"""Concrete orchestrator that wires Manager, Teradata and Plot agents.
+
+This implementation uses `langgraph` to build a small state graph where
+the manager decides which agent to call next. The graph cycles until a
+terminal END state is reached. The `run` method prepares an initial
+MultiAgentState and triggers the compiled app asynchronously.
+"""
+
 from langgraph.graph import StateGraph, END
 from langchain.memory.chat_memory import BaseChatMemory
 
@@ -33,6 +41,11 @@ class MultiAgent(BaseMultiAgent):
         self.app = self.graph.compile()
 
     def route_decision(self, state: MultiAgentState) -> str:
+        """Decide next node name from the current state.
+
+        If the state contains ``done`` or an unknown decision the function
+        returns the graph END token.
+        """
         if state.get("done"):
             return END
 
@@ -46,6 +59,12 @@ class MultiAgent(BaseMultiAgent):
 
     @override
     def _build_graph(self) -> None:
+        """Construct the state graph connecting agents.
+
+        This internal helper registers nodes and conditional edges used
+        by the compiled state machine.
+        """
+
         self.graph.add_node("manager", self.manager_agent)
         self.graph.add_node("teradata", self.teradata_agent)
         self.graph.add_node("plot", self.plot_agent)
@@ -66,6 +85,18 @@ class MultiAgent(BaseMultiAgent):
 
     @override
     async def run(self, user_query: str) -> MultiAgentState:
+        """Run the multi-agent graph for a user query and return final state.
+
+        Parameters
+        ----------
+        user_query:
+            The natural language query from the user to process.
+
+        Returns
+        -------
+        MultiAgentState
+            The final state after the orchestrator has completed.
+        """
         if not isinstance(user_query, str):
             raise ValueError(f"User query must be a string.")
         
@@ -81,5 +112,6 @@ class MultiAgent(BaseMultiAgent):
     
     @override
     def visualize(self):
+        """Save a PNG rendering of the compiled state graph to disk."""
         with open(LANGGRAPH_GRPAH_IMAGE_PATH, "wb") as f:
             f.write(self.app.get_graph().draw_mermaid_png())

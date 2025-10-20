@@ -12,19 +12,25 @@ from multi_agents import MultiAgent
 from agents import TeradataAgent, ManagerAgent, PlotAgent
 
 def get_openai_config(base_dir: Optional[Path] = None) -> dict:
-    """Load OpenAI settings from ``config/.env`` and return a ready client + settings.
+    """Load OpenAI settings and return a ready client + settings.
+
+    Parameters
+    ----------
+    base_dir:
+        Optional base directory to isolate .env loading (tests may pass a
+        temporary directory). When provided the loader reads `config/.env`
+        from that directory instead of the process environment.
 
     Returns
     -------
     dict
-        Mapping with keys ``{"api_key", "model", "client"}``.
+        Mapping with keys {"api_key", "model", "client"}. The
+        ``client`` is an instantiated OpenAI client object.
 
     Raises
     ------
-    FileNotFoundError
-        If ``config/.env`` is missing.
     RuntimeError
-        If the required ``OPENAI_API_KEY`` is not set.
+        If the required OPENAI_API_KEY is not set in the environment.
     """
     # Ensure .env is loaded and exists (reuses Config side-effect to load)
     Config.load(base_dir=base_dir)
@@ -61,19 +67,24 @@ def get_openai_config(base_dir: Optional[Path] = None) -> dict:
     return {"api_key": api_key, "model": model, "client": client}
 
 def get_google_genai_config(base_dir: Optional[Path] = None) -> dict:
-    """Load OpenAI settings from ``config/.env`` and return a ready client + settings.
+    """Load Google (Generative AI) settings and return a ready client.
+
+    Parameters
+    ----------
+    base_dir:
+        Optional base directory used to locate `config/.env` for isolated
+        runs. If None the process environment is consulted.
 
     Returns
     -------
     dict
-        Mapping with keys ``{"api_key", "model", "client"}``.
+        Mapping with keys {"api_key", "model", "client"} where
+        ``client`` is an instantiated client object.
 
     Raises
     ------
-    FileNotFoundError
-        If ``config/.env`` is missing.
     RuntimeError
-        If the required ``GOOGLE_API_KEY`` is not set.
+        If the required GOOGLE_API_KEY is not present in the environment.
     """
     # Ensure .env is loaded and exists (reuses Config side-effect to load)
     Config.load(base_dir=base_dir)
@@ -99,12 +110,24 @@ def get_google_genai_config(base_dir: Optional[Path] = None) -> dict:
     return {"api_key": api_key, "model": model, "client": client}
 
 def get_ai_backend(base_dir: Optional[Path] = None) -> str:
-    """Return AI_BACKEND (defaults to 'gpt').
+    """Return the configured AI backend name.
 
-    Precedence rules:
-    - If ``base_dir`` is provided: read only from that ``config/.env`` file and ignore process env.
-      This isolates tests and ad-hoc checks from global settings.
-    - If ``base_dir`` is None: use the process environment and default to "gpt".
+    Parameters
+    ----------
+    base_dir:
+        When provided, the function reads `config/.env` from this
+        directory and ignores the global process environment. Useful
+        for isolated tests.
+
+    Returns
+    -------
+    str
+        Lower-cased backend name (e.g. 'gpt' or 'gemini'). Defaults to 'gpt'.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``base_dir`` is provided but the expected .env file is missing.
     """
     if base_dir is not None:
         env_path = base_dir / "config" / ".env"
@@ -119,6 +142,22 @@ def get_ai_backend(base_dir: Optional[Path] = None) -> str:
     return os.getenv("AI_BACKEND", "gpt").strip().lower() or "gpt"
 
 async def get_multi_agent() -> MultiAgent:
+    """Construct and return a configured MultiAgent instance.
+
+    The function chooses an LLM implementation based on the configured
+    backend and initializes the three agents (Teradata, Plot, Manager)
+    with a shared conversational memory.
+
+    Returns
+    -------
+    MultiAgent
+        A fully constructed MultiAgent ready to be used by the application.
+
+    Raises
+    ------
+    ValueError
+        If an unknown AI backend is configured.
+    """
     backend = get_ai_backend()
 
     llm = None

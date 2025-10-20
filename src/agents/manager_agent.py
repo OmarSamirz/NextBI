@@ -1,3 +1,12 @@
+"""Manager agent implementation.
+
+The ManagerAgent acts as the decision-maker: given the user query and
+previous agent outputs it decides whether the multi-agent flow should
+query Teradata, create a plot, or finish. It uses a tool-calling agent
+executor under the hood and parses the (expected) JSON decision payload
+returned by the LLM.
+"""
+
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -14,6 +23,16 @@ from constants import MANAGER_AGENT_SYSTEM_PROMPT_PATH
 
 
 class ManagerAgent(BaseAgent):
+    """Agent responsible for routing and high-level decisions.
+
+    Expected behaviour
+    ------------------
+    - Build a system prompt from `MANAGER_AGENT_SYSTEM_PROMPT_PATH`.
+    - Use a tool-calling agent executor (tools are empty for now).
+    - When invoked, include the user query and other agents' outputs
+      in the prompt, then parse a JSON decision structure from the LLM
+      response. The parsed decision sets ``state['manager_decision']``.
+    """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
         super().__init__(llm, memory)
@@ -30,6 +49,20 @@ class ManagerAgent(BaseAgent):
     @override
     @classmethod
     async def create(cls: type[Self], llm: BaseLanguageModel, memory: BaseChatMemory) -> Self:
+        """Asynchronously create a configured ManagerAgent instance.
+
+        Parameters
+        ----------
+        llm:
+            LangChain language model used by this agent.
+        memory:
+            Shared conversation memory.
+
+        Returns
+        -------
+        ManagerAgent
+            The initialized manager agent ready for use.
+        """
         self = cls(llm, memory)
         self.tools = []
 
@@ -47,6 +80,20 @@ class ManagerAgent(BaseAgent):
 
     @override
     async def __call__(self, state: MultiAgentState) -> MultiAgentState:
+        """Run the manager logic and update the provided state.
+
+        Parameters
+        ----------
+        state:
+            The current MultiAgentState containing the user query and
+            any previous agent outputs.
+
+        Returns
+        -------
+        MultiAgentState
+            The updated state with fields set such as ``manager_decision``,
+            ``response``, and ``explanation``.
+        """
         logger.log("[Agent]", "manager")
         user_query = f"User Query:\n{state['user_query']}"
         td_agent_response = state.get("td_agent_response", None)

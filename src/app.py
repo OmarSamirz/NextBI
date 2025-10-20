@@ -16,7 +16,13 @@ from modules.event_loop_thread import EventLoopThread
 MAX_MESSAGES: int = 100  # Cap in-memory history length
 
 def get_or_create_event_loop():
-    """Get or create the persistent event loop thread."""
+    """Get or create the persistent event loop thread.
+
+    Returns
+    -------
+    EventLoopThread
+        The global EventLoopThread instance stored in Streamlit session state.
+    """
     if "event_loop" not in st.session_state:
         elt = EventLoopThread()
         elt.start()
@@ -29,7 +35,15 @@ def get_or_create_event_loop():
 # SESSION STATE INITIALIZATION
 # -------------------------------------------------------------------------
 def init_session_state() -> None:
-    """Initialize session state with messages and basic setup."""
+    """Initialize Streamlit session state keys used by the app.
+
+    Initializes keys: ``messages``, ``ai_instance``, ``event_loop`` and
+    ``init_attempted`` so other code can rely on their presence.
+
+    Returns
+    -------
+    None
+    """
     if "messages" not in st.session_state:
         st.session_state["messages"] = []  # type: List[Message] # type: ignore
 
@@ -46,9 +60,14 @@ def init_session_state() -> None:
 
 
 def initialize_ai_backend() -> bool:
-    """
-    Initialize the AI backend. Returns True on success, False on failure.
-    This is separated from init_session_state for lazy initialization.
+    """Initialize the AI backend and attach it to session state.
+
+    Returns
+    -------
+    bool
+        True on successful initialization, False on failure. On success
+        the initialized AI implementation is stored at
+        ``st.session_state['ai_instance']``.
     """
     try:
         loop = st.session_state["event_loop"]
@@ -80,7 +99,12 @@ def initialize_ai_backend() -> bool:
 # SIDEBAR RENDERING
 # -------------------------------------------------------------------------
 def render_sidebar() -> None:
-    """Render the left sidebar with branding and description."""
+    """Render the left sidebar including logo and short description.
+
+    Returns
+    -------
+    None
+    """
     with st.sidebar:
         if TERADATA_LOGO_PATH.exists():
             st.image(str(TERADATA_LOGO_PATH))
@@ -105,7 +129,17 @@ def render_sidebar() -> None:
 # CHAT RENDERING
 # -------------------------------------------------------------------------
 def render_chat(messages: List[Message]) -> None:
-    """Render chat messages in Streamlit UI."""
+    """Render chat messages in the Streamlit UI.
+
+    Parameters
+    ----------
+    messages:
+        List of message dictionaries to render in the chat area.
+
+    Returns
+    -------
+    None
+    """
 
     # def _normalize(text: str) -> str:
     #     return text.replace("\r\n", "\n").replace("\r", "\n").strip()
@@ -142,7 +176,8 @@ async def generate_ai_reply() -> tuple[str, bool]:
     Returns
     -------
     tuple[str, bool]
-        (reply_text, is_plot)
+        A tuple of (reply_text, is_plot) where ``is_plot`` indicates if the
+        response produced a visualization that should be displayed.
     """
     backend = st.session_state.get("ai_instance")
 
@@ -163,7 +198,17 @@ async def generate_ai_reply() -> tuple[str, bool]:
 
 
 def handle_user_input(prompt: str) -> None:
-    """Handle user input and update session state."""
+    """Process a user's chat prompt, call the AI backend and update state.
+
+    Parameters
+    ----------
+    prompt:
+        The raw text input typed by the user in the chat box.
+
+    Returns
+    -------
+    None
+    """
     text = prompt.strip()
     if not text:
         return
