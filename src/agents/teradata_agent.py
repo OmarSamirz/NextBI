@@ -10,7 +10,6 @@ from mcp_use import MCPClient
 from mcp_use.adapters import LangChainAdapter
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 
 import os
@@ -38,22 +37,15 @@ class TeradataAgent(BaseAgent):
     """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
-        super().__init__(llm, memory)
         self.mcp_config = MCP_CONFIG.copy()
         with open(str(TERADATA_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
             content = Template(f.read())
 
-        self.system_prompt = content.safe_substitute(
+        system_prompt = content.safe_substitute(
             database_name=os.getenv("TD_NAME"),
             charts_path=CHARTS_PATH
         )
-
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", self.system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
+        super().__init__(llm, memory, system_prompt)
 
         self.client = MCPClient.from_dict(config=self.mcp_config)
         self.adapter = LangChainAdapter()

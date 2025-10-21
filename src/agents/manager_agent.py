@@ -35,16 +35,10 @@ class ManagerAgent(BaseAgent):
     """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
-        super().__init__(llm, memory)
         with open(str(MANAGER_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
-            self.system_prompt = f.read()
+            system_prompt = f.read()
 
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", self.system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
+        super().__init__(llm, memory, system_prompt)
 
     @override
     @classmethod

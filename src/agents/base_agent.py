@@ -10,6 +10,7 @@ factory-style ``create`` constructor as well as a callable interface
 
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 import os
 from typing import Self
@@ -54,13 +55,20 @@ class BaseAgent(ABC):
     - tools, agent_executor: placeholders for tool/open-agent plumbing
     """
 
-    def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
+    def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory, system_prompt: str) -> None:
         super().__init__()
         self.llm = llm
         self.memory = memory
         self.max_iterations = int(os.getenv("MAX_ITERATIONS", 30))
         self.verbose = eval(os.getenv("VERBOSE", False))
         self.return_intermediate_steps = eval(os.getenv("RETURN_INTERMEDIATE_STEPS", False))
+
+        self.prompt = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
 
         self.tools = None
         self.agent_executor = None

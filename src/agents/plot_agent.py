@@ -9,7 +9,6 @@ can load the generated image.
 
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_experimental.tools.python.tool import PythonAstREPLTool
 
@@ -32,20 +31,14 @@ class PlotAgent(BaseAgent):
     """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
-        super().__init__(llm, memory)
         with open(str(PLOT_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
             content = Template(f.read())
 
-        self.system_prompt = content.safe_substitute(
+        system_prompt = content.safe_substitute(
             charts_path=CHARTS_PATH
         )
+        super().__init__(llm, memory, system_prompt)
 
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", self.system_prompt),
-            MessagesPlaceholder(variable_name="chat_history"),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
 
     @override
     @classmethod
