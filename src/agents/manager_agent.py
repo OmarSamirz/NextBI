@@ -119,9 +119,14 @@ class ManagerAgent(BaseAgent):
             message = response["message"]
             explanation = response["explanation"]
         except:
-            decision = response["output"].lower()
-            message = response["output"]
-            explanation = response["output"]
+            if isinstance(response, dict):
+                text = response.get("output", "")
+            else:
+                text = str(response)
+
+            decision = "done"
+            message = text
+            explanation = text
 
         if "teradata" in decision:
             state["manager_decision"] = "teradata"
