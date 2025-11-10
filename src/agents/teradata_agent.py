@@ -7,7 +7,8 @@ queries produced as intermediate tool outputs and collects them into
 """
 
 from mcp_use import MCPClient
-from mcp_use.adapters import LangChainAdapter
+from dotenv import load_dotenv
+from mcp_use.agents.adapters import LangChainAdapter
 from langchain.base_language import BaseLanguageModel
 from langchain.memory.chat_memory import BaseChatMemory
 from langchain.agents import AgentExecutor, create_tool_calling_agent
@@ -23,7 +24,9 @@ from typing_extensions import override
 from agents import BaseAgent
 from modules.logger import logger
 from states import MultiAgentState
-from constants import MCP_CONFIG, TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH
+from constants import TERADATA_AGENT_SYSTEM_PROMPT_PATH, CHARTS_PATH, ENV_PATH
+
+load_dotenv(ENV_PATH)
 
 
 class TeradataAgent(BaseAgent):
@@ -37,7 +40,23 @@ class TeradataAgent(BaseAgent):
     """
 
     def __init__(self, llm: BaseLanguageModel, memory: BaseChatMemory) -> None:
-        self.mcp_config = MCP_CONFIG.copy()
+        self.mcp_config = {
+            "mcpServers": {
+                "teradata": {
+                    "command": "uvx",
+                    "args": ["teradata-mcp-server"],
+                    "env": {
+                        "TD_NAME": os.getenv("TD_NAME"),
+                        "TD_HOST": os.getenv("TD_HOST"),
+                        "TD_USER": os.getenv("TD_USER"),
+                        "TD_PASSWORD": os.getenv("TD_PASSWORD"),
+                        "TD_PORT": os.getenv("TD_PORT"),
+                        "MCP_TRANSPORT": os.getenv("MCP_TRANSPORT"),
+                        "DATABASE_URI": os.getenv("DATABASE_URI"),
+                    }
+                }
+            }
+        }
         with open(str(TERADATA_AGENT_SYSTEM_PROMPT_PATH), "r", encoding="utf-8") as f:
             content = Template(f.read())
 

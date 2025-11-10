@@ -1,5 +1,6 @@
 config/.env
-**/__pycache__/*
-charts/*
-logs/*
-.vscode/*
+**/__pycache__/
+charts/
+logs/
+.vscode/
+.venv/
